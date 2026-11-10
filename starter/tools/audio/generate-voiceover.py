@@ -48,16 +48,26 @@ SCRIPT = [
     }
 ]
 
-def synthesize_macos(text: str, out_wav: str, voice="Daniel", rate=215):
-    """Use macOS `say` + `afconvert` for studio-grade offline voiceover."""
-    temp_aiff = out_wav.replace(".wav", ".aiff")
-    cmd_say = ["say", "-v", voice, "-r", str(rate), text, "-o", temp_aiff]
-    subprocess.run(cmd_say, check=True)
-    
-    cmd_conv = ["afconvert", "-f", "WAVE", "-d", "LEI16@44100", temp_aiff, out_wav]
-    subprocess.run(cmd_conv, check=True)
-    if os.path.exists(temp_aiff):
-        os.remove(temp_aiff)
+def synthesize_edge_tts(text: str, out_wav: str, voice="en-US-ChristopherNeural", rate="+15%"):
+    """
+    Synthesize high-fidelity human AI voiceover using Microsoft Azure Neural TTS (100% Free).
+    Voices include:
+      - 'en-US-ChristopherNeural' (Deep, cinematic trailer tone)
+      - 'en-US-AndrewMultilingualNeural' (Warm, authentic tech presenter)
+      - 'en-GB-RyanNeural' (Engaging British narrator)
+    """
+    temp_mp3 = out_wav.replace(".wav", ".mp3")
+    cmd = [
+        sys.executable, "-m", "edge_tts",
+        "--voice", voice,
+        "--rate", rate,
+        "--text", text,
+        "--write-media", temp_mp3
+    ]
+    subprocess.run(cmd, check=True)
+    subprocess.run(["afconvert", "-f", "WAVE", "-d", "LEI16@44100", temp_mp3, out_wav], check=True)
+    if os.path.exists(temp_mp3):
+        os.remove(temp_mp3)
 
 def synthesize_elevenlabs(text: str, out_wav: str, api_key: str, voice_id="21m00Tcm4TlvDq8ikWAM"):
     """Fetch studio voice from ElevenLabs REST API."""
@@ -84,7 +94,8 @@ def synthesize_elevenlabs(text: str, out_wav: str, api_key: str, voice_id="21m00
 
 def main():
     api_key = os.environ.get("ELEVENLABS_API_KEY")
-    mode = "ElevenLabs" if api_key else "macOS Neural/CoreAudio"
+    voice = os.environ.get("VOICE", "en-US-ChristopherNeural")
+    mode = "ElevenLabs" if api_key else f"Edge Neural AI TTS ({voice})"
     print(f"🎙️  Synthesizing AEOForge Voiceover via {mode}...")
     
     for item in SCRIPT:
@@ -94,16 +105,16 @@ def main():
             try:
                 synthesize_elevenlabs(item["text"], out_wav, api_key)
             except Exception as e:
-                print(f"    ElevenLabs failed ({e}), falling back to macOS say...")
-                synthesize_macos(item["text"], out_wav, rate=item.get("rate", 215))
+                print(f"    ElevenLabs failed ({e}), falling back to Edge Neural TTS...")
+                synthesize_edge_tts(item["text"], out_wav, voice=voice, rate="+15%")
         else:
-            synthesize_macos(item["text"], out_wav, rate=item.get("rate", 215))
+            synthesize_edge_tts(item["text"], out_wav, voice=voice, rate="+15%")
             
         with wave.open(out_wav, "r") as w:
             dur = w.getnframes() / float(w.getframerate())
-            print(f"    ✓ Saved {out_wav} ({dur:.2f}s, rate={item.get('rate', 215)})")
+            print(f"    ✓ Saved {out_wav} ({dur:.2f}s, voice={voice})")
 
-    print("\n✅ All 5 voiceover scene tracks generated successfully in public/sfx/vo/!")
+    print("\n✅ All 5 human AI voiceover scene tracks generated successfully in public/sfx/vo/!")
 
 if __name__ == "__main__":
     main()

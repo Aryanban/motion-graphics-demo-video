@@ -10,6 +10,7 @@
     "still": "remotion still Scene-Example out/scene-example.png --frame=-1",
     "timing": "node tools/dump-timing.mjs",
     "stills": "node tools/stills.mjs",
+    "vo:gen": "python3 tools/audio/generate-voiceover.py",
     "sfx:gen": "node tools/audio/gen-sfx.mjs",
     "track:gen": "node tools/audio/gen-track.mjs",
     "copy:check": "node tools/qa/check-copy.mjs",

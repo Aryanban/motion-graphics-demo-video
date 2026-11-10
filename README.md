@@ -53,6 +53,7 @@ Run from `starter/`:
 | Command | Purpose |
 |---|---|
 | `npm run typecheck` | Strict TypeScript check (`tsc --noEmit`) |
+| `npm run vo:gen` | Synthesize natural neural voiceover tracks (`tools/audio/generate-voiceover.py`) |
 | `npm run timing` | Write scene/beat boundaries to `out/timing-dump.json` |
 | `npm run copy:check` | Check on-screen words/sec pacing against targets |
 | `npm run still` | Render the final frame of `Scene-Example` to PNG |
@@ -61,6 +62,55 @@ Run from `starter/`:
 | `npm run finish` | Render + two-pass `-14 LUFS` FFmpeg master + 720p web copy (`tools/finish.sh`) |
 
 > **Note:** Optional Python/FFmpeg stages (`tools/audio/detect-beats.py`, `tools/mb/`, `tools/finish.sh` normalization, `tools/qa/sample-reference-frames.sh`) expect `ffmpeg`, `ffprobe`, and Python packages (`numpy`, `pillow`, `librosa`, `openai-whisper`, etc.) as needed per stage.
+
+---
+
+## 🎙️ Natural AI Voiceover Integration (Free & Studio Tiers)
+
+Standard OS text-to-speech (such as basic macOS `say` or Linux `espeak`) sounds robotic because it lacks natural breathing, micro-pauses, and emotional pitch inflections. This studio integrates a **multi-tier neural voiceover engine** in `starter/tools/audio/generate-voiceover.py`:
+
+```mermaid
+flowchart TD
+    Script["Scene Narration Script\n(tools/audio/generate-voiceover.py)"] --> Router{"TTS Engine Selection"}
+    Router -->|100% Free / Default| EdgeTTS["Microsoft Azure Neural TTS\n(en-US-AndrewMultilingualNeural)\nZero cost • Zero keys • Studio quality"]
+    Router -->|ELEVENLABS_API_KEY set| ElevenLabs["ElevenLabs Free/Paid Tier\n(Adam / Rachel / Antoni)\n10k chars/mo free • Hyper-realistic"]
+    Router -->|Air-Gapped Offline| Kokoro["Kokoro-82M / Piper\nOpen-source local neural model"]
+    EdgeTTS --> Output["public/sfx/vo/vo-scene*.wav\n(44.1kHz 16-bit PCM)"]
+    ElevenLabs --> Output
+    Kokoro --> Output
+    Output --> Master["Master.tsx <VoiceoverLayer />\n+ Dynamic Audio Ducking (Music to 35%)"]
+```
+
+### 1. Option A: Microsoft Edge Neural TTS (⭐ Recommended — 100% Free Forever)
+- **Zero API keys, zero signup, and unlimited usage**.
+- Powered by Microsoft's Azure Speech Neural engine (the same voices used in Microsoft Copilot).
+- Warm, natural human breathing and conversational cadence.
+- **Top Voices:**
+  - `en-US-AndrewMultilingualNeural` *(Default)* — Warm, confident Silicon Valley tech presenter.
+  - `en-US-ChristopherNeural` — Deep, cinematic documentary / movie trailer voice.
+  - `en-GB-RyanNeural` — Crisp, modern British tech founder voice.
+  - `en-US-AriaNeural` — Expressive, articulate, professional female narrator.
+
+Generate natural voiceovers instantly:
+```bash
+cd starter
+python3 tools/audio/generate-voiceover.py
+# Or with another voice:
+VOICE="en-US-ChristopherNeural" python3 tools/audio/generate-voiceover.py
+```
+
+### 2. Option B: ElevenLabs (Studio Quality with Free Tier)
+- Industry standard for emotional range, realistic micro-pauses, and actor-grade vocal delivery.
+- **Free Tier gives 10,000 characters per month** (sufficient for ~25 to 30 complete 20–30 second product demo videos every month).
+- Grab a free key from [elevenlabs.io](https://elevenlabs.io) and run:
+```bash
+ELEVENLABS_API_KEY="your-elevenlabs-key" python3 tools/audio/generate-voiceover.py
+```
+
+### 3. Dynamic Audio Ducking & Remotion Integration
+When voiceover is enabled in `src/Master.tsx`, the 120 BPM dark-electronic soundtrack automatically **ducks to 35% volume** during speech segments so the voice stands out crystal-clear, then swells back to full volume (60%) on scene transitions and beat drops.
+
+For full architectural details, script tuning, and speech-rate formulas, see [`starter/docs/video/voiceover-guide.md`](starter/docs/video/voiceover-guide.md).
 
 ---
 
