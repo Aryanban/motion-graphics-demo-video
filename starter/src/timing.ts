@@ -70,10 +70,11 @@ export const isBackbeat = (frame: number, tolerance = 1): boolean =>
 // To retime the film, change an index here and nothing else.
 // ---------------------------------------------------------------------------
 const SCENE_ENDS = {
-  example: backbeatFrame(4),
-  // hook: backbeatFrame(4),
-  // proof: backbeatFrame(10),
-  // finale: backbeatFrame(18),
+  hook: backbeatFrame(3),       // frame 105 (3.5s)
+  auditHud: backbeatFrame(7),   // frame 225 (7.5s)
+  visualSom: beatFrame(22),     // frame 330 (11.0s, biggest drop/lift)
+  astPayoff: backbeatFrame(15), // frame 465 (15.5s)
+  closingCta: 600,              // frame 600 (20.0s, end of track)
 };
 
 export type SceneName = keyof typeof SCENE_ENDS;

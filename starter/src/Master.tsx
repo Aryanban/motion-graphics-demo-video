@@ -1,30 +1,33 @@
 // Master - the 16:9 film: the soundtrack plus one <Sequence> per scene.
 //
-// Every `from` and `durationInFrames` comes from SCENES in timing.ts. Add a
-// scene by adding it to the scene list there, importing it here, and giving it
-// a <Sequence> below and a debug composition in Root.tsx.
+// Every `from` and `durationInFrames` comes from SCENES in timing.ts.
 
 import { Audio } from "@remotion/media";
 import { AbsoluteFill, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { SOUNDS, Sfx } from "./components/Sfx";
-import { ExampleScene } from "./scenes/ExampleScene";
+import { Scene1Hook } from "./scenes/Scene1Hook";
+import { Scene2AuditHUD } from "./scenes/Scene2AuditHUD";
+import { Scene3VisualSoM } from "./scenes/Scene3VisualSoM";
+import { Scene4ASTPayoff } from "./scenes/Scene4ASTPayoff";
+import { Scene5ClosingCTA } from "./scenes/Scene5ClosingCTA";
 import { colors } from "./theme";
-import { MUSIC_VOLUME, AUDIO_TRIM, SCENES, SOUNDTRACK, TOTAL_FRAMES } from "./timing";
+import { AUDIO_TRIM, MUSIC_VOLUME, SCENES, SOUNDTRACK, TOTAL_FRAMES } from "./timing";
 
 const FADE_OUT_FRAMES = 18; // 0.6 s at 30 fps: reads as an outro without wasting the last beat
 
-// Sound effects, optional (references/sound-effects.md): one row per event,
-// four to eight in a film. `at` is the frame the visual uses, from timing.ts;
-// `sound` is one of the library's (SOUNDS), or `src` a file in public/sfx with
-// the lead measured by scripts/measure-lead.py. <Sfx> starts each file early
-// by its lead so the loudest point lands on the event. The `sfx` prop turns
-// the layer off; Root.tsx registers that as Master-NoSfx, so the user can
-// compare the two renders by ear. Most feeds play muted: the film has to
-// work with CUES empty.
 type Cue = { at: number; volume?: number } & ({ sound: keyof typeof SOUNDS } | { src: string; lead: number });
 const CUES: Cue[] = [
-  // { at: SCENES.example.start, sound: "whoosh", volume: 0.35 },
-  // { at: SCENES.example.start + 20, src: "sfx/thump.wav", lead: 0, volume: 0.5 },
+  // Scene 1: Initial whoosh entrance
+  { at: SCENES.hook.start, src: "sfx/whoosh.wav", lead: 0.07, volume: 0.3 },
+  // Scene 2: Click on audit button + HUD pop
+  { at: SCENES.auditHud.start + 30, src: "sfx/tick.wav", lead: 0.01, volume: 0.45 },
+  { at: SCENES.auditHud.start + 60, src: "sfx/pop.wav", lead: 0.02, volume: 0.35 },
+  // Scene 3: Reticle target lock
+  { at: SCENES.visualSom.start + 30, src: "sfx/tick.wav", lead: 0.01, volume: 0.4 },
+  // Scene 4: BASS DROP IMPACT on Beat 22 (frame 330)
+  { at: SCENES.astPayoff.start, src: "sfx/bass.wav", lead: 0.02, volume: 0.6 },
+  // Scene 5: Finale whoosh entrance
+  { at: SCENES.closingCta.start, src: "sfx/whoosh.wav", lead: 0.07, volume: 0.35 },
 ];
 
 /** The sound effects, one layer both masters share (MasterVertical renders it too). */
@@ -57,8 +60,29 @@ export const Master: React.FC<{ sfx?: boolean; music?: boolean }> = ({ sfx = tru
       )}
       <SoundLayer sfx={sfx} />
 
-      <Sequence from={SCENES.example.start} durationInFrames={SCENES.example.duration}>
-        <ExampleScene />
+      {/* Scene 1: The Hook (0 - 105) */}
+      <Sequence from={SCENES.hook.start} durationInFrames={SCENES.hook.duration}>
+        <Scene1Hook />
+      </Sequence>
+
+      {/* Scene 2: Autonomous Audit & 4-Pillar HUD (105 - 225) */}
+      <Sequence from={SCENES.auditHud.start} durationInFrames={SCENES.auditHud.duration}>
+        <Scene2AuditHUD />
+      </Sequence>
+
+      {/* Scene 3: Visual Perception & Set-of-Marks (225 - 330) */}
+      <Sequence from={SCENES.visualSom.start} durationInFrames={SCENES.visualSom.duration}>
+        <Scene3VisualSoM />
+      </Sequence>
+
+      {/* Scene 4: 0.28ms AST Self-Healing Payoff (330 - 465) */}
+      <Sequence from={SCENES.astPayoff.start} durationInFrames={SCENES.astPayoff.duration}>
+        <Scene4ASTPayoff />
+      </Sequence>
+
+      {/* Scene 5: Local Sovereignty & GitHub CTA (465 - 600) */}
+      <Sequence from={SCENES.closingCta.start} durationInFrames={SCENES.closingCta.duration}>
+        <Scene5ClosingCTA />
       </Sequence>
     </AbsoluteFill>
   );

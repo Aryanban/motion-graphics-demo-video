@@ -23,7 +23,11 @@ import { AbsoluteFill, Sequence, interpolate, staticFile, useCurrentFrame } from
 // Swap in the vertical port of each scene (e.g. ../scenes/vertical/HookVertical).
 // The scaffold's example scene stands in so this file typechecks the moment it is copied.
 import { SoundLayer } from "../Master";
-import { ExampleScene } from "../scenes/ExampleScene";
+import { Scene1Hook } from "../scenes/Scene1Hook";
+import { Scene2AuditHUD } from "../scenes/Scene2AuditHUD";
+import { Scene3VisualSoM } from "../scenes/Scene3VisualSoM";
+import { Scene4ASTPayoff } from "../scenes/Scene4ASTPayoff";
+import { Scene5ClosingCTA } from "../scenes/Scene5ClosingCTA";
 import { colors } from "../theme";
 import { AUDIO_TRIM, SCENES, SOUNDTRACK, TOTAL_FRAMES } from "../timing";
 
@@ -46,8 +50,20 @@ export const MasterVertical: React.FC<{ sfx?: boolean; music?: boolean }> = ({ s
       )}
       <SoundLayer sfx={sfx} />
 
-      <Sequence from={SCENES.example.start} durationInFrames={SCENES.example.duration}>
-        <ExampleScene />
+      <Sequence from={SCENES.hook.start} durationInFrames={SCENES.hook.duration}>
+        <Scene1Hook />
+      </Sequence>
+      <Sequence from={SCENES.auditHud.start} durationInFrames={SCENES.auditHud.duration}>
+        <Scene2AuditHUD />
+      </Sequence>
+      <Sequence from={SCENES.visualSom.start} durationInFrames={SCENES.visualSom.duration}>
+        <Scene3VisualSoM />
+      </Sequence>
+      <Sequence from={SCENES.astPayoff.start} durationInFrames={SCENES.astPayoff.duration}>
+        <Scene4ASTPayoff />
+      </Sequence>
+      <Sequence from={SCENES.closingCta.start} durationInFrames={SCENES.closingCta.duration}>
+        <Scene5ClosingCTA />
       </Sequence>
     </AbsoluteFill>
   );
