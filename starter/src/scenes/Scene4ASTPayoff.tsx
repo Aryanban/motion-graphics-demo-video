@@ -3,6 +3,7 @@
 
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AgentBot } from "../components/AgentBot";
 import { BgMesh, Grain, Vignette } from "../components/Atmosphere";
 import { Counter } from "../components/Counter";
 import { sceneBeats } from "../scene-frames";
@@ -55,6 +56,16 @@ export const Scene4ASTPayoff: React.FC = () => {
       }}
     >
       <BgMesh bg={colors.bgCanvas} primary={colors.signalSuccess} accentSoft="rgba(16,185,129,0.18)" />
+
+      {/* Animated AI Agent in Victorious Mode */}
+      <AgentBot
+        x={120}
+        y={220}
+        emotion="victorious"
+        dialogue="AST Patched! 280 tokens left!"
+        dialogueInFrame={SCORE_SURGE_IN}
+        scale={1.15}
+      />
 
       {/* Shockwave ring on the drop */}
       <div

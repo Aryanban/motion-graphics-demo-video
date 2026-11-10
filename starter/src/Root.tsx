@@ -31,7 +31,18 @@ export const RemotionRoot: React.FC = () => (
     <Composition
       id="Master"
       component={Master}
-      defaultProps={{ sfx: true }}
+      defaultProps={{ sfx: true, voiceover: true }}
+      durationInFrames={TOTAL_FRAMES}
+      fps={FPS}
+      width={canvas.width}
+      height={canvas.height}
+    />
+
+    {/* Master without voiceover (Music + SFX only) */}
+    <Composition
+      id="Master-NoVoiceover"
+      component={Master}
+      defaultProps={{ sfx: true, voiceover: false }}
       durationInFrames={TOTAL_FRAMES}
       fps={FPS}
       width={canvas.width}
@@ -42,7 +53,7 @@ export const RemotionRoot: React.FC = () => (
     <Composition
       id="Master-NoSfx"
       component={Master}
-      defaultProps={{ sfx: false }}
+      defaultProps={{ sfx: false, voiceover: false }}
       durationInFrames={TOTAL_FRAMES}
       fps={FPS}
       width={canvas.width}

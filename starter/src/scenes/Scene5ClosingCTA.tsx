@@ -3,6 +3,7 @@
 
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AgentBot } from "../components/AgentBot";
 import { BgMesh, Grain, Vignette } from "../components/Atmosphere";
 import { sceneBeats } from "../scene-frames";
 import { colors, fonts } from "../theme";
@@ -57,6 +58,17 @@ export const Scene5ClosingCTA: React.FC = () => {
       }}
     >
       <BgMesh bg={colors.bgCanvas} primary={colors.accent} accentSoft="rgba(16,185,129,0.12)" />
+
+      {/* Animated AI Agent Victorious Outro */}
+      <AgentBot
+        x={1520}
+        y={420}
+        emotion="victorious"
+        dialogue="Runway clear! Ready to deploy."
+        dialogueInFrame={TERMINAL_IN}
+        scale={1.2}
+        flipX={true}
+      />
 
       <div
         style={{

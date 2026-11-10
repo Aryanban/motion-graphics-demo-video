@@ -3,6 +3,7 @@
 
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AgentBot } from "../components/AgentBot";
 import { BgMesh, Grain, Vignette } from "../components/Atmosphere";
 import { Counter } from "../components/Counter";
 import { sceneBeats } from "../scene-frames";
@@ -47,6 +48,10 @@ export const Scene1Hook: React.FC = () => {
     config: { damping: 14, stiffness: 180 },
   });
 
+  // 3D perspective tilt
+  const tiltX = interpolate(frame, [0, SCENES.hook.duration], [8, 2]);
+  const tiltY = interpolate(frame, [0, SCENES.hook.duration], [-10, -2]);
+
   return (
     <AbsoluteFill
       style={{
@@ -56,6 +61,16 @@ export const Scene1Hook: React.FC = () => {
       }}
     >
       <BgMesh bg={colors.bgCanvas} primary={colors.accent} accentSoft="rgba(244,63,94,0.12)" />
+
+      {/* Animated AI Agent Protagonist in Panic Mode */}
+      <AgentBot
+        x={160}
+        y={490}
+        emotion="panicked"
+        dialogue="DOM OVERLOAD! Trapped in modal!"
+        dialogueInFrame={ALERT_IN}
+        scale={1.2}
+      />
 
       <div
         style={{
@@ -69,6 +84,7 @@ export const Scene1Hook: React.FC = () => {
           justifyContent: "center",
           padding: "60px 80px",
           boxSizing: "border-box",
+          perspective: 1200,
         }}
       >
         {/* Eyebrow badge */}
@@ -103,7 +119,7 @@ export const Scene1Hook: React.FC = () => {
               fontWeight: 600,
             }}
           >
-            Web Agent Diagnostic
+            Act I: The Token Trap
           </span>
         </div>
 
@@ -137,10 +153,10 @@ export const Scene1Hook: React.FC = () => {
             transform: `translateY(${interpolate(subtitleProgress, [0, 1], [24, 0])}px)`,
           }}
         >
-          Autonomous agents choke on 50,000-token DOM bloat & modal traps.
+          Autonomous agents choke on 50,000-token DOM bloat &amp; modal traps.
         </div>
 
-        {/* Code / DOM Pain Card */}
+        {/* Code / DOM Pain Card with 3D tilt */}
         <div
           style={{
             marginTop: 48,
@@ -148,7 +164,7 @@ export const Scene1Hook: React.FC = () => {
             borderRadius: 20,
             background: colors.bgPanel,
             border: `1px solid ${colors.borderMedium}`,
-            boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
+            boxShadow: "0 28px 70px rgba(0, 0, 0, 0.7), 0 0 40px rgba(244,63,94,0.12)",
             padding: "24px 32px",
             boxSizing: "border-box",
             opacity: cardProgress,
@@ -156,7 +172,7 @@ export const Scene1Hook: React.FC = () => {
               cardProgress,
               [0, 1],
               [0.95, 1],
-            )})`,
+            )}) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
           }}
         >
           {/* Card Topbar */}

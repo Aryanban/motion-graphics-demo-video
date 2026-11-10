@@ -3,6 +3,7 @@
 
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AgentBot } from "../components/AgentBot";
 import { BgMesh, Grain, Vignette } from "../components/Atmosphere";
 import { Counter } from "../components/Counter";
 import { ClickRipple, Cursor, clickPath } from "../components/Cursor";
@@ -44,6 +45,17 @@ export const Scene2AuditHUD: React.FC = () => {
       }}
     >
       <BgMesh bg={colors.bgCanvas} primary={colors.accent} accentSoft="rgba(59,130,246,0.14)" />
+
+      {/* Animated AI Agent Companion in Scanning Mode */}
+      <AgentBot
+        x={1580}
+        y={140}
+        emotion="scanning"
+        dialogue="Scanning 4-Pillar Matrix..."
+        dialogueInFrame={HUD_IN}
+        scale={1.1}
+        flipX={true}
+      />
 
       {/* Top Navigation & URL Audit Bar — Composed from frame 0 */}
       <div

@@ -44,12 +44,42 @@ export const SoundLayer: React.FC<{ sfx?: boolean }> = ({ sfx = true }) =>
     </>
   );
 
-export const Master: React.FC<{ sfx?: boolean; music?: boolean }> = ({ sfx = true, music = true }) => {
+/** Voiceover narration layer aligned to scene starts */
+export const VoiceoverLayer: React.FC<{ voiceover?: boolean }> = ({ voiceover = true }) =>
+  !voiceover ? null : (
+    <>
+      <Sequence from={SCENES.hook.start + 6} layout="none">
+        <Audio src={staticFile("sfx/vo/vo-scene1.wav")} volume={0.95} />
+      </Sequence>
+      <Sequence from={SCENES.auditHud.start + 8} layout="none">
+        <Audio src={staticFile("sfx/vo/vo-scene2.wav")} volume={0.95} />
+      </Sequence>
+      <Sequence from={SCENES.visualSom.start + 6} layout="none">
+        <Audio src={staticFile("sfx/vo/vo-scene3.wav")} volume={0.95} />
+      </Sequence>
+      <Sequence from={SCENES.astPayoff.start + 6} layout="none">
+        <Audio src={staticFile("sfx/vo/vo-scene4.wav")} volume={0.95} />
+      </Sequence>
+      <Sequence from={SCENES.closingCta.start + 8} layout="none">
+        <Audio src={staticFile("sfx/vo/vo-scene5.wav")} volume={0.95} />
+      </Sequence>
+    </>
+  );
+
+export const Master: React.FC<{ sfx?: boolean; music?: boolean; voiceover?: boolean }> = ({
+  sfx = true,
+  music = true,
+  voiceover = true,
+}) => {
   const frame = useCurrentFrame();
+
+  // Dynamic Audio Ducking: duck music volume to 0.35 when voiceover is enabled,
+  // letting the voice stand out crisply, and fade out at the end of the film.
+  const targetMusicVol = voiceover ? 0.35 : MUSIC_VOLUME;
   const volume = interpolate(
     frame,
     [TOTAL_FRAMES - FADE_OUT_FRAMES, TOTAL_FRAMES],
-    [MUSIC_VOLUME, 0],
+    [targetMusicVol, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
@@ -59,6 +89,7 @@ export const Master: React.FC<{ sfx?: boolean; music?: boolean }> = ({ sfx = tru
         <Audio src={staticFile(SOUNDTRACK)} trimBefore={AUDIO_TRIM} volume={volume} />
       )}
       <SoundLayer sfx={sfx} />
+      <VoiceoverLayer voiceover={voiceover} />
 
       {/* Scene 1: The Hook (0 - 105) */}
       <Sequence from={SCENES.hook.start} durationInFrames={SCENES.hook.duration}>

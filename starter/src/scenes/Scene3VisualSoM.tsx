@@ -3,6 +3,7 @@
 
 import React from "react";
 import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AgentBot } from "../components/AgentBot";
 import { BgMesh, Grain, Vignette } from "../components/Atmosphere";
 import { sceneBeats } from "../scene-frames";
 import { colors, fonts } from "../theme";
@@ -63,6 +64,16 @@ export const Scene3VisualSoM: React.FC = () => {
       }}
     >
       <BgMesh bg={colors.bgCanvas} primary={colors.signalDanger} accentSoft="rgba(244,63,94,0.15)" />
+
+      {/* Animated AI Agent Locking Sub-pixel Coordinates */}
+      <AgentBot
+        x={360}
+        y={120}
+        emotion="locked"
+        dialogue="Target locked: [2] Find Events!"
+        dialogueInFrame={LOCK_IN}
+        scale={1.1}
+      />
 
       {/* Main Viewport Container */}
       <div
