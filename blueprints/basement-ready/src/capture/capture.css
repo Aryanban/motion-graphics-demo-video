@@ -1,0 +1,494 @@
+/* Capture flow. Colours come only from brand/tokens.css. */
+@import "../../brand/tokens.css";
+
+.cap {
+  --cap-r: calc(var(--radius-1) * 0.75);    /* 6px */
+  --cap-r-sm: calc(var(--radius-1) * 0.5);  /* 4px */
+  --cap-gutter: var(--space-3);
+  --cap-on-video: drop-shadow(0 0 1px color-mix(in srgb, var(--color-ink) 80%, transparent));
+  --dim-bg: var(--color-bg);
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+/* Resets sit at zero specificity so every class below wins. */
+:where(.cap) *, :where(.cap) *::before, :where(.cap) *::after { box-sizing: border-box; }
+:where(.cap) :where(h1, h2, p, ol, ul, dl, dd) { margin: 0; }
+:where(.cap) :where(ol, ul) { padding: 0; list-style: none; }
+:where(.cap) button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+:where(.cap) :focus-visible { outline: 2px solid var(--color-mint-line); outline-offset: 2px; }
+:where(.cap) [tabindex="-1"]:focus { outline: none; }
+.cap-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cap-muted { color: var(--color-ink-muted); }
+
+/* ---------- buttons ---------- */
+.cap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 14px 22px;
+  border: 1px solid transparent;
+  border-radius: var(--cap-r);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-align: center;
+  transition: transform var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+}
+.cap-btn:active:not(:disabled):not([aria-disabled="true"]) { transform: scale(0.98); }
+.cap-btn:disabled { cursor: default; opacity: 0.55; }
+.cap-btn svg { flex: none; }
+.cap-btn--primary { background: var(--color-mint); color: var(--color-mint-ink); }
+.cap-btn--primary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-mint) 86%, var(--color-ink)); }
+.cap-btn--ghost { background: transparent; color: var(--color-ink); border-color: var(--color-ink); }
+.cap-btn--ghost:hover:not(:disabled) { background: var(--color-surface); }
+.cap-btn--waiting { background: var(--color-surface); color: var(--color-ink); border-color: var(--color-border); cursor: default; }
+.cap-btn--narrow { flex: 0 0 auto !important; padding-inline: 18px; }
+
+.cap-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--cap-r);
+  background: var(--color-card);
+  color: var(--color-ink);
+}
+.cap-icon-btn:hover:not(:disabled) { border-color: var(--color-ink); }
+.cap-icon-btn--solid { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-card); }
+.cap-icon-btn:disabled { opacity: 0.55; cursor: default; }
+
+/* ---------- drawing marks ---------- */
+.cap-ticks { position: absolute; inset: var(--space-3); pointer-events: none; filter: var(--cap-on-video); }
+.cap-ticks i { position: absolute; width: 22px; height: 22px; border: 0 solid var(--color-card); }
+.cap-ticks [data-c="tl"] { top: 0; left: 0; border-top-width: 2px; border-left-width: 2px; }
+.cap-ticks [data-c="tr"] { top: 0; right: 0; border-top-width: 2px; border-right-width: 2px; }
+.cap-ticks [data-c="bl"] { bottom: 0; left: 0; border-bottom-width: 2px; border-left-width: 2px; }
+.cap-ticks [data-c="br"] { bottom: 0; right: 0; border-bottom-width: 2px; border-right-width: 2px; }
+
+.cap-cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  translate: -50% -50%;
+  pointer-events: none;
+  filter: var(--cap-on-video);
+  background:
+    linear-gradient(var(--color-card), var(--color-card)) center / 100% 1.5px no-repeat,
+    linear-gradient(var(--color-card), var(--color-card)) center / 1.5px 100% no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 4px, var(--color-ink) 4.5px);
+  mask: radial-gradient(circle, transparent 4px, var(--color-ink) 4.5px);
+}
+
+/* An architectural dimension line: extension lines and 45° slash ticks at both ends. */
+.cap-dim {
+  --slash: linear-gradient(135deg, transparent calc(50% - 0.8px), currentColor calc(50% - 0.8px), currentColor calc(50% + 0.8px), transparent calc(50% + 0.8px));
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+}
+.cap-dim::before, .cap-dim::after { content: ""; position: absolute; inset: 0; }
+.cap-dim[data-axis="x"] { height: 20px; }
+.cap-dim[data-axis="x"]::before {
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
+    linear-gradient(currentColor, currentColor) left center / 1px 16px no-repeat,
+    linear-gradient(currentColor, currentColor) right center / 1px 16px no-repeat;
+}
+.cap-dim[data-axis="x"]::after {
+  inset: 0 -5px;
+  background:
+    var(--slash) 0 50% / 10px 10px no-repeat,
+    var(--slash) 100% 50% / 10px 10px no-repeat;
+}
+.cap-dim[data-axis="y"] { width: 20px; }
+.cap-dim[data-axis="y"]::before {
+  background:
+    linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) center top / 16px 1px no-repeat,
+    linear-gradient(currentColor, currentColor) center bottom / 16px 1px no-repeat;
+}
+.cap-dim[data-axis="y"]::after {
+  inset: -5px 0;
+  background:
+    var(--slash) 50% 0 / 10px 10px no-repeat,
+    var(--slash) 50% 100% / 10px 10px no-repeat;
+}
+.cap-dim-label { position: relative; z-index: 1; padding: 3px 8px; background: var(--dim-bg); white-space: nowrap; }
+.cap-dim[data-axis="y"] .cap-dim-label { writing-mode: vertical-rl; rotate: 180deg; padding: 8px 3px; }
+.cap-dim--length { margin-top: var(--space-4); }
+
+/* ---------- full pages: brief, blocked, problem ---------- */
+.cap--page, .cap--review { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.cap-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 max(var(--cap-gutter), env(safe-area-inset-right)) 0 max(var(--cap-gutter), env(safe-area-inset-left));
+}
+.cap-page-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding-top: env(safe-area-inset-top);
+  border-bottom: 1px solid var(--color-ink);
+}
+.cap-eyebrow { font-size: var(--text-small); color: var(--color-ink-muted); }
+.cap-page-body { flex: 1; display: grid; align-content: start; gap: var(--space-3); padding: var(--space-4) 0 var(--space-5); animation: cap-rise var(--dur-2) var(--ease-out) both; }
+.cap-title { font-family: var(--font-display); font-weight: 900; font-size: clamp(44px, 12vw, 76px); letter-spacing: -0.045em; line-height: 0.92; }
+.cap-title--sm { font-size: clamp(34px, 9vw, 52px); }
+.cap-lede { font-size: 18px; max-width: 42ch; }
+.cap-h2 { margin-top: var(--space-3); font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: -0.02em; line-height: 1.1; }
+.cap-num { font-family: var(--font-mono); font-size: 13px; color: var(--color-ink-muted); padding-top: 3px; }
+
+.cap-how { display: grid; gap: 4px; border-top: 1px solid var(--color-ink); }
+.cap-how li { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--color-border); }
+.cap-how svg { width: 88px; height: 64px; border-radius: var(--cap-r); background: var(--color-surface); overflow: visible; }
+/* the drawings: forest lines, mint fills only */
+.how-line { fill: none; stroke: var(--color-ink); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.how-thin { fill: none; stroke: var(--color-ink); stroke-width: 1; }
+.how-fill { fill: var(--color-mint); }
+.how-fill.how-line { fill: var(--color-mint); }
+.how-empty { fill: none; stroke: color-mix(in srgb, var(--color-ink) 30%, transparent); stroke-width: 1; }
+.how-path { fill: none; stroke: var(--color-ink); stroke-width: 1.6; stroke-dasharray: 2.5 3; stroke-linecap: round; }
+.how-dot { fill: var(--color-mint); stroke: var(--color-ink); stroke-width: 1.6; }
+.cap-how b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 19px; letter-spacing: -0.02em; line-height: 1.15; }
+.cap-how .cap-muted { display: block; margin-top: 2px; font-size: 15px; line-height: 1.35; }
+.cap-fine--left { text-align: left; font-size: var(--text-tiny); }
+.cap-shotlist { border-top: 1px solid var(--color-ink); }
+.cap-shotlist li { display: grid; grid-template-columns: 36px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border); }
+.cap-shotlist b { display: block; font-weight: 600; }
+.cap-shotlist .cap-muted { display: block; font-size: 15px; }
+.cap-shotlist--steps li { font-size: 17px; }
+.cap-more { font-size: 15px; max-width: 52ch; }
+
+.cap-tiplist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--color-ink); }
+.cap-tiplist li { padding: 12px 12px 12px 0; border-right: 1px solid var(--color-border); }
+.cap-tiplist li + li { padding-left: 12px; }
+.cap-tiplist li:last-child { border-right: 0; padding-right: 0; }
+.cap-tiplist b { display: block; font-weight: 600; font-size: 15px; line-height: 1.2; }
+.cap-tiplist .cap-muted { display: block; margin-top: 2px; font-size: 13px; line-height: 1.35; }
+
+.cap-page-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom));
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+.cap-fine { font-size: 14px; color: var(--color-ink-muted); text-align: center; }
+/* the brief's footer on a phone: fine print first, then both buttons on one row */
+@media (max-width: 719px) {
+  .cap-page-actions:has(> .cap-fine) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cap-page-actions:has(> .cap-fine) > .cap-btn { padding-inline: 12px; }
+  .cap-page-actions > .cap-fine, .cap-page-actions > .cap-btn:only-of-type { grid-column: 1 / -1; }
+}
+
+@media (min-width: 720px) {
+  .cap-page-actions { grid-template-columns: auto auto 1fr; align-items: center; justify-content: start; position: static; border-top: 0; padding-top: 0; padding-bottom: var(--space-6); }
+  .cap-fine { grid-column: 1 / -1; text-align: left; }
+}
+
+/* ---------- live camera ---------- */
+.cap--live {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "stage";
+  background: var(--color-ink);
+}
+
+.cap-mic-bars { display: flex; align-items: flex-end; gap: 2px; height: 16px; }
+.cap-mic-bars i { width: 4px; border-radius: 1px; background: var(--color-border); }
+.cap-mic-bars i:nth-child(1) { height: 25%; }
+.cap-mic-bars i:nth-child(2) { height: 44%; }
+.cap-mic-bars i:nth-child(3) { height: 62%; }
+.cap-mic-bars i:nth-child(4) { height: 81%; }
+.cap-mic-bars i:nth-child(5) { height: 100%; }
+.cap-mic-bars i[data-on="true"] { background: var(--color-mint-line); }
+
+.cap-stage {
+  grid-area: stage;
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  container-type: size;
+  background: var(--color-ink);
+}
+.cap-frame { position: relative; width: 100%; height: 100%; }
+/* the camera: the whole frame before filming; while filming, the top part, with the map below it */
+.cap-view { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; }
+.cap--live[data-phase="recording"] .cap-frame { display: grid; grid-template-rows: minmax(0, 1fr) min(52%, 480px); }
+.cap--live[data-phase="recording"] .cap-view { height: auto; }
+.cap-video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; background: var(--color-ink); }
+.cap-video[data-mirrored="true"] { transform: scaleX(-1); }
+.cap-frame > .cap-dim { display: none; }
+
+.cap-plate {
+  padding: 10px 14px;
+  border-radius: var(--cap-r);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 15px;
+  border: var(--line-ink);
+}
+.cap-plate--center { position: absolute; top: 50%; left: 50%; z-index: 2; translate: -50% -50%; width: max-content; max-width: min(320px, 80%); text-align: center; }
+
+/* discard confirmation */
+.cap-confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: end center;
+  padding: var(--cap-gutter) var(--cap-gutter) max(var(--cap-gutter), env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--color-ink) 45%, transparent);
+  animation: cap-fade var(--dur-2) var(--ease-out) both;
+}
+.cap-confirm-card { display: grid; gap: 12px; width: min(440px, 100%); padding: var(--space-4); border: var(--line-ink); border-radius: var(--cap-r); background: var(--color-bg); box-shadow: var(--shadow-float); }
+.cap-confirm-card h2 { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -0.03em; line-height: 1.05; }
+.cap-confirm-card p { color: var(--color-ink-muted); }
+.cap-confirm-actions { display: grid; gap: var(--space-2); margin-top: 4px; }
+
+/* ---------- review ---------- */
+.cap-review {
+  display: grid;
+  grid-template-areas: "bar" "stage" "player" "body" "actions";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto 1fr auto;
+  min-height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 max(var(--cap-gutter), env(safe-area-inset-right)) 0 max(var(--cap-gutter), env(safe-area-inset-left));
+}
+.cap-review > .cap-page-bar { grid-area: bar; }
+.cap-review-stage {
+  grid-area: stage;
+  position: relative;
+  display: grid;
+  place-items: center;
+  /* Fit the frame's shape: a portrait take gets a tall stage, a landscape upload a short one. */
+  height: min(50dvh, 600px, calc((100vw - 2 * var(--cap-gutter) - 40px) / var(--ar, 0.5625) + 72px));
+  margin-top: var(--space-3);
+  border-radius: var(--cap-r);
+  background: var(--color-surface);
+  container-type: size;
+  --dim-bg: var(--color-surface);
+}
+.cap-review-stage .cap-frame {
+  --pad-x: 40px;
+  --pad-y: 72px;
+  width: min(calc(100cqw - var(--pad-x)), calc((100cqh - var(--pad-y)) * var(--ar, 0.5625)));
+  height: auto;
+  aspect-ratio: var(--ar, 0.5625);
+  margin-bottom: 28px;
+  background: var(--color-ink);
+}
+.cap-review-stage .cap-ticks { inset: 10px; }
+.cap-video--review { cursor: pointer; object-fit: contain; }
+.cap-review-stage .cap-dim--under { display: flex; position: absolute; left: 0; right: 0; bottom: -30px; }
+
+.cap-player { grid-area: player; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; }
+.cap-player[data-hidden="true"] { display: none; }
+.cap-scrub { width: 100%; height: 44px; margin: 0; background: transparent; accent-color: var(--color-ink); cursor: pointer; }
+.cap-player-time { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.cap-review-body { grid-area: body; display: grid; align-content: start; gap: 14px; padding: var(--space-2) 0 var(--space-4); animation: cap-rise var(--dur-2) var(--ease-out) both; }
+.cap-facts { border-top: 1px solid var(--color-ink); }
+.cap-facts div { display: flex; justify-content: space-between; gap: var(--space-3); padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.cap-facts dt { color: var(--color-ink-muted); }
+.cap-facts dd { font-family: var(--font-mono); font-size: 15px; text-align: right; }
+.cap-note { padding: 12px 14px; border: var(--line); border-radius: var(--cap-r-sm); font-size: 15px; }
+.cap-review > .cap-page-actions { grid-area: actions; }
+
+@media (min-width: 900px) {
+  .cap-stage { background: var(--color-surface); --dim-bg: var(--color-surface); }
+  .cap-frame {
+    --pad: 120px;
+    width: min(calc(100cqw - var(--pad)), calc((100cqh - var(--pad)) * var(--ar, 1.7778)));
+    height: auto;
+    aspect-ratio: var(--ar, 1.7778);
+    background: var(--color-ink);
+  }
+  .cap-frame > .cap-dim { display: flex; position: absolute; }
+  .cap-frame > .cap-dim--top { left: 0; right: 0; top: -34px; }
+  .cap-frame > .cap-dim--side { top: 0; bottom: 0; left: -34px; }
+
+  .cap--review { overflow: hidden; }
+  .cap-review {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "bar bar" "stage body" "player actions";
+    column-gap: var(--space-5);
+  }
+  .cap-review-stage { height: auto; min-height: 0; }
+  .cap-review-body { padding-top: var(--space-3); overflow-y: auto; }
+  .cap-review > .cap-page-actions { grid-template-columns: 1fr; position: static; align-self: end; padding: var(--space-2) 0 var(--space-4); border-top: 0; }
+  .cap-confirm { place-items: center; }
+}
+
+@keyframes cap-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes cap-fade { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cap *, .cap *::before, .cap *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* the basement in 3D so far, opened from the map */
+/* the full view covers everything else on the picture, and takes drags to orbit */
+.cap-frame:has(.cap-3d-full) :is(.guide-top, .guide-bottom, .guide-turn) { display: none; }
+.cap-3d-full { position: fixed; inset: 0; z-index: 20; pointer-events: auto; display: grid; grid-template-rows: minmax(0, 1fr) auto; background: color-mix(in srgb, var(--color-ink) 92%, var(--color-mint) 8%); /* a scan reads best on dark */ }
+.cap-3d-full-bar { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); background: var(--color-card); border-top: 1px solid var(--color-ink); }
+.cap-3d-full-bar p { margin: 0; font-size: 14px; line-height: 1.35; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cap-flash, .guide-voice p, .guide-task, .guide-turn { animation-duration: 1ms !important; }
+  .guide-bars i { animation: none !important; }
+}
+
+/* ---------- filming with the guide ---------- */
+
+/* the find outline: mint corner ticks and a label */
+.cap-flash { position: absolute; z-index: 3; pointer-events: none; border: 1.5px solid color-mix(in srgb, var(--color-mint) 70%, transparent); animation: cap-flash 1600ms var(--ease-out) both; }
+.cap-flash i { position: absolute; width: 14px; height: 14px; border-color: var(--color-mint); border-style: solid; border-width: 0; }
+.cap-flash i[data-c="tl"] { left: -3px; top: -3px; border-left-width: 3px; border-top-width: 3px; }
+.cap-flash i[data-c="tr"] { right: -3px; top: -3px; border-right-width: 3px; border-top-width: 3px; }
+.cap-flash i[data-c="bl"] { left: -3px; bottom: -3px; border-left-width: 3px; border-bottom-width: 3px; }
+.cap-flash i[data-c="br"] { right: -3px; bottom: -3px; border-right-width: 3px; border-bottom-width: 3px; }
+.cap-flash-label { position: absolute; left: -2px; top: calc(100% + 6px); padding: 4px 8px; border-radius: var(--cap-r-sm); background: var(--color-card); color: var(--color-ink); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+@keyframes cap-flash { 0% { opacity: 0; scale: 1.08; } 12% { opacity: 1; scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* top: close, the clock, Done; then the guide's voice line */
+.guide-top { position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: grid; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 12px 0; pointer-events: none; }
+.guide-top > * { pointer-events: auto; }
+.guide-bar { display: flex; align-items: center; gap: 8px; }
+.guide-icon-btn { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--color-ink) 55%, transparent); color: var(--color-card); }
+.guide-rec { display: inline-flex; align-items: center; gap: 7px; margin-right: auto; padding: 7px 12px; border-radius: var(--radius-1); background: color-mix(in srgb, var(--color-ink) 55%, transparent); color: var(--color-card); font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+/* Recording: a steady red mark beside the time, no blinking. */
+.guide-rec > i { width: 8px; height: 8px; border-radius: 50%; background: var(--color-stop); }
+.guide-rec b { font-weight: 500; color: var(--color-mint); }
+.guide-rec--ready { font-family: var(--font-body); font-size: 13px; font-weight: 600; }
+.guide-rec .cap-mic-bars i { background: color-mix(in srgb, var(--color-card) 35%, transparent); }
+.guide-rec .cap-mic-bars i[data-on="true"] { background: var(--color-mint); }
+.guide-done { min-height: 44px; padding: 8px 16px; border: 0; border-radius: var(--radius-2); background: var(--color-mint); color: var(--color-mint-ink); font-weight: 800; font-size: 15px; }
+.guide-done[data-waiting="true"] { background: color-mix(in srgb, var(--color-ink) 55%, transparent); color: var(--color-card); font-weight: 600; font-size: 13px; }
+
+.guide-voice { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-2); background: color-mix(in srgb, var(--color-ink) 92%, transparent); color: var(--color-card); }
+.guide-voice p { font-weight: 600; font-size: 17px; line-height: 1.3; animation: guide-in var(--dur-2) var(--ease-out) both; }
+.guide-voice-icon { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--color-mint); }
+.guide-voice-icon svg { width: 22px; height: 22px; }
+.guide-bars { display: flex; align-items: center; gap: 3px; height: 22px; }
+.guide-bars i { width: 3px; height: 30%; border-radius: 2px; background: var(--color-mint); }
+.guide-voice[data-speaking="true"] .guide-bars i { animation: guide-bar 0.9s ease-in-out infinite; }
+.guide-bars i:nth-child(2) { animation-delay: -0.6s !important; }
+.guide-bars i:nth-child(3) { animation-delay: -0.3s !important; }
+.guide-bars i:nth-child(4) { animation-delay: -0.75s !important; }
+.guide-bars i:nth-child(5) { animation-delay: -0.15s !important; }
+@keyframes guide-bar { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+@keyframes guide-in { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+
+/* which way to turn or tilt for the part that isn't filmed yet */
+.guide-turn { position: absolute; z-index: 4; top: 40%; display: grid; justify-items: center; gap: 6px; color: var(--color-mint); filter: drop-shadow(0 2px 8px color-mix(in srgb, var(--color-ink) 50%, transparent)); animation: guide-in var(--dur-2) var(--ease-out) both; pointer-events: none; }
+.guide-turn svg { width: 72px; height: 72px; animation: guide-nudge 1.4s var(--ease-out) infinite; }
+.guide-turn span { display: grid; justify-items: center; max-width: 170px; padding: 5px 10px; border-radius: var(--radius-1); background: var(--color-ink); color: var(--color-card); text-align: center; line-height: 1.2; }
+.guide-turn b { font-weight: 800; font-size: 14px; }
+.guide-turn em { font-style: normal; font-size: 12px; opacity: 0.8; }
+.guide-turn[data-dir="left"] { left: 12px; }
+.guide-turn[data-dir="right"] { right: 12px; }
+.guide-turn[data-dir="right"] svg { scale: -1 1; animation-name: guide-nudge-r; }
+.guide-turn[data-dir="around"] { left: 50%; translate: -50% 0; }
+.guide-turn[data-dir="up"] { top: 24%; left: 50%; translate: -50% 0; }
+.guide-turn[data-dir="up"] svg { rotate: 90deg; animation-name: guide-nudge-up; }
+.guide-turn[data-dir="down"] { top: 34%; left: 50%; translate: -50% 0; grid-template-areas: "label" "arrow"; }
+.guide-turn[data-dir="down"] svg { grid-area: arrow; rotate: -90deg; animation-name: guide-nudge-down; }
+.guide-turn[data-dir="down"] span { grid-area: label; }
+@keyframes guide-nudge { 0%, 100% { translate: 0 0; } 50% { translate: -8px 0; } }
+@keyframes guide-nudge-r { 0%, 100% { translate: 0 0; } 50% { translate: 8px 0; } }
+@keyframes guide-nudge-up { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@keyframes guide-nudge-down { 0%, 100% { translate: 0 0; } 50% { translate: 0 8px; } }
+
+/* bottom, before filming: the start card */
+.guide-bottom { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; display: grid; gap: 10px; padding: 0 10px max(10px, env(safe-area-inset-bottom)); }
+
+/* bottom, while filming: the task and the big map of the basement so far */
+.map-panel { position: relative; z-index: 6; display: flex; flex-direction: column; gap: 10px; min-height: 0; margin-top: -16px; padding: 14px 12px max(12px, env(safe-area-inset-bottom)); border-radius: 0; background: var(--color-ink); color: var(--color-card); }
+.map-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.map-panel .guide-task { font-size: 21px; }
+.map-count { display: flex; align-items: center; gap: 12px; padding-top: 4px; font-family: var(--font-mono); font-size: 12px; color: color-mix(in srgb, var(--color-card) 72%, transparent); white-space: nowrap; }
+.map-skip { min-height: 32px; margin: -6px 0; padding: 0 4px; border: 0; background: none; color: var(--color-card); font-family: var(--font-body); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.map-view { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; container-type: size; border-radius: var(--radius-2); background: color-mix(in srgb, var(--color-ink) 90%, var(--color-mint)); }
+.map-art, .map-canvas { position: absolute !important; inset: 0; }
+.map-status { position: absolute; left: 12px; right: 60px; bottom: 10px; display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--color-card); pointer-events: none; }
+.map-dash { flex: none; width: 22px; height: 4px; overflow: visible; }
+.map-dash path { stroke: var(--color-card); stroke-width: 2.6; stroke-dasharray: 4 3; }
+.map-open { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--color-ink) 70%, transparent); color: var(--color-card); }
+.map-open svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.map-compass { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 12px; }
+.map-compass svg { width: min(170px, 62cqh); height: auto; overflow: visible; }
+.map-compass p { font-weight: 700; font-size: 15px; text-align: center; }
+.map-ring { fill: none; stroke: color-mix(in srgb, var(--color-card) 35%, transparent); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.map-north { fill: color-mix(in srgb, var(--color-card) 65%, transparent); font-family: var(--font-mono); font-size: 11px; text-anchor: middle; }
+.map-cone { fill: var(--color-mint); fill-opacity: 0.55; }
+.map-you { fill: var(--color-mint); stroke: var(--color-ink); stroke-width: 4; }
+.guide-lens { padding: 1px 6px; border-radius: var(--radius-1); background: var(--color-mint); color: var(--color-mint-ink); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+
+.guide-card { justify-self: stretch; display: grid; gap: 12px; padding: 16px 18px 14px; border: var(--line-ink); border-radius: var(--radius-2); background: var(--color-bg); color: var(--color-ink); }
+.guide-task { font-family: var(--font-display); font-weight: 800; font-size: 24px; letter-spacing: -0.025em; line-height: 1.08; animation: guide-in var(--dur-2) var(--ease-out) both; }
+.guide-link { justify-self: start; padding: 2px 0; border: 0; background: none; color: var(--color-ink-muted); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.guide-nudge { font-size: 14px; font-weight: 600; }
+.guide-card--start { gap: 10px; }
+.guide-tips { font-size: var(--text-small); color: var(--color-ink-muted); }
+.guide-start { min-height: 56px; font-size: 18px; }
+
+@media (min-width: 900px) {
+  .guide-bottom { justify-items: center; }
+  .guide-card { justify-self: center; width: min(520px, 100%); }
+  /* on a big screen the map sits beside the whole camera picture, whichever way it's held */
+  .cap--live[data-phase="recording"] .cap-frame { width: min(calc(100cqw - var(--pad)), 1200px); height: calc(100cqh - var(--pad)); aspect-ratio: auto; grid-template-rows: none; grid-template-columns: minmax(0, 1fr) minmax(340px, 40%); }
+  .cap--live[data-phase="recording"] .cap-video { object-fit: contain; }
+  .cap--live[data-phase="recording"] .cap-frame > .cap-dim { display: none; }
+  .map-panel { margin-top: 0; border-radius: 0; }
+  .guide-top { justify-items: center; }
+  .guide-bar, .guide-voice { width: min(560px, 100%); }
+}

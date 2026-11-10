@@ -1,0 +1,104 @@
+# The iPhone app's Xcode project. Run `make generate` (or `xcodegen generate`) after editing this:
+# BasementReady.xcodeproj and BasementReady/Info.plist are generated from here and not committed.
+name: BasementReady
+options:
+  bundleIdPrefix: com.davidbarry
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+# Your Apple team for signing comes from Signing.local.xcconfig, which isn't committed (see README.md).
+# Without it the simulator build still works; a phone build needs a team.
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    DEAD_CODE_STRIPPING: YES
+targets:
+  BasementReady:
+    type: application
+    platform: iOS
+    sources:
+      - path: BasementReady
+      # The guide's voice clips, straight from the web app's folder: whatever clips exist when you build.
+      - path: ../public/voice
+        type: folder
+        buildPhase: resources
+    info:
+      path: BasementReady/Info.plist
+      properties:
+        CFBundleDisplayName: Basement Ready
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIRequiredDeviceCapabilities: [arkit]
+        ITSAppUsesNonExemptEncryption: false
+        # The brand's type (OFL, from github.com/google/fonts; licences beside them in Resources/Fonts).
+        UIAppFonts: ["HankenGrotesk[wght].ttf", "GeistMono[wght].ttf"]
+        # basementready://new opens the start screen (the web's in-app "New scan" link).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.davidbarry.basementready
+            CFBundleURLSchemes: [basementready]
+        NSCameraUsageDescription: Basement Ready films your basement to measure it and check if it can become a second unit.
+        NSLocalNetworkUsageDescription: To send your video to the Basement Ready server running on your Mac while testing.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidbarry.basementready
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+      configs:
+        # The phone runs Debug builds (no TestFlight), so they're optimised like Release: unoptimised Swift
+        # made the map and the camera handler several times slower.
+        Debug:
+          SWIFT_OPTIMIZATION_LEVEL: "-O"
+    postCompileScripts:
+      # Debug builds only: the Mac's Wi-Fi address at build time, so "Mac (dev)" points at this Mac.
+      - name: Dev server address
+        script: sh "$SRCROOT/scripts/dev-server.sh"
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/dev-server.json
+        basedOnDependencyAnalysis: false
+  BasementReadyTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [BasementReadyTests]
+    dependencies:
+      - target: BasementReady
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidbarry.basementready.tests
+        GENERATE_INFOPLIST_FILE: YES
+  # start → film (a replayed take) → send → result, with no person. Needs scripts/test-server.sh (make test starts it).
+  BasementReadyUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [BasementReadyUITests]
+    dependencies:
+      - target: BasementReady
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.davidbarry.basementready.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: BasementReady
+schemes:
+  BasementReady:
+    build:
+      targets:
+        BasementReady: all
+        BasementReadyTests: [test]
+        BasementReadyUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets: [BasementReadyTests, BasementReadyUITests]
+    archive:
+      config: Release

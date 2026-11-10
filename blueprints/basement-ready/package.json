@@ -1,0 +1,87 @@
+{
+  "name": "basement-ready",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Film your basement on a phone and find out if it can become a legal second home in Ontario, then get the layout, the permit set and the money to build it. Built on Meta's models.",
+  "license": "MIT",
+  "author": "David Barry",
+  "homepage": "https://www.basementready.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dbar2/basement-ready.git"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "vite",
+    "dev:phone": "sh scripts/dev-phone.sh",
+    "voice": "sh tools/voice/make.sh",
+    "dev:api": "API_PORT=${API_PORT:-8787} SCAN3D_URL=http://127.0.0.1:8790 SCAN3D_TOKEN=dev tsx watch --env-file-if-exists=.env server/index.ts",
+    "build": "tsc -b && vite build",
+    "start": "tsx server/index.ts",
+    "test:meta": "tsx --env-file=.env scripts/test-meta.ts",
+    "typecheck": "tsc -b",
+    "make:sample": "tsx scripts/make-sample.ts",
+    "db:generate": "drizzle-kit generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:record": "E2E_MODE=record playwright test --project=chromium-desktop",
+    "worker": "tsx server/worker.ts",
+    "smoke": "tsx scripts/smoke.ts",
+    "dev:scan3d": "cd services/scan3d && SCAN3D_TOKEN=dev .venv/bin/python run_local.py serve --port 8790",
+    "try:live": "tsx scripts/try-live-capture.ts",
+    "eval": "tsx scripts/eval/run.ts",
+    "qa": "tsx scripts/qa/run.ts",
+    "qa:capture": "tsx scripts/qa/run.ts --capture-only",
+    "qa:review": "tsx scripts/qa/run.ts --review-only"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1158.0",
+    "@aws-sdk/s3-request-presigner": "^3.1158.0",
+    "@clerk/backend": "^3.26.4",
+    "@clerk/react": "^6.18.3",
+    "@electric-sql/pglite": "^0.5.13",
+    "@hono/clerk-auth": "^3.1.1",
+    "@hono/node-server": "^2.1.5",
+    "@pdf-lib/fontkit": "1.1.1",
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "@react-three/postprocessing": "^3.2.2",
+    "@tanstack/react-router": "^1.170.46",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.14",
+    "motion": "^14.7.1",
+    "pdf-lib": "1.17.1",
+    "postgres": "^3.4.9",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.186.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "drizzle-kit": "^0.31.11",
+    "playwright": "1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

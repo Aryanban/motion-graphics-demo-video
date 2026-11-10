@@ -1,0 +1,28 @@
+# Dependencies and TypeScript build info
+**/node_modules/
+*.tsbuildinfo
+
+# Starter generated renders, caches, and temporary captures
+starter/out/
+starter/package-lock.json
+starter/public/sfx/
+starter/public/footage/.frames/
+starter/public/footage/.states/
+
+# Blueprint build/render outputs
+blueprints/**/out/
+
+# Python bytecode and virtual environments
+**/__pycache__/
+*.py[cod]
+**/.venv/
+.venv/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Local secrets and environment overrides (preserve example templates)
+.env
+.env.*
+!.env.example

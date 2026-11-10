@@ -1,0 +1,331 @@
+"""One scan: frames in, measured room + point cloud + per-frame depth lookup out."""
+
+import os
+import tempfile
+import threading
+import time
+from dataclasses import dataclass
+
+import numpy as np
+
+from . import MODEL_CODE_TAG, MODEL_ID, MODEL_REVISION, ScanError
+from .export import depth_bytes, ply_bytes, surfel_bytes
+from .frames import crop_for, load_frames, model_size, select_sharpest
+from .mesh import MAX_FACES, room_mesh
+from .room import describe, fit_room
+
+FIT_VOXEL = 0.02  # m, voxel grid for plane fitting and the exported cloud (research note: 2 cm)
+MAX_POINTS = 300_000
+CONF_PERCENTILE = 20  # drop each view's least confident 20% of pixels (research note)
+MAX_MEASUREMENT_RATIO = 1.5  # a tape number this far from the model's estimate is probably a typo
+SURFEL_STRIDE = 2  # every 2nd pixel of every frame becomes a surface point for the photo-like view
+SURFEL_VOXEL = 0.012  # m: one point per 1.2 cm cell, the sharpest one
+SURFEL_AGREE = 0.04  # m: two frames must put a surface in the same 4 cm cell, so lone edge smears go
+MAX_SURFELS = 1_500_000
+
+
+@dataclass
+class ScanResult:
+    scan: dict
+    points_ply: bytes
+    depth_bin: bytes
+    surfels: bytes = b""
+    mesh: bytes = b""
+
+
+def _cell_keys(pts: np.ndarray, voxel: float) -> np.ndarray:
+    keys = np.floor(pts / voxel).astype(np.int64)
+    keys -= keys.min(0)
+    return (keys[:, 0] << 42) | (keys[:, 1] << 21) | keys[:, 2]
+
+
+def dense_surfels(views: list[dict], to_room, s: float) -> bytes:
+    """Every 2nd pixel of every frame as a coloured surface point, in the room frame, sized to the
+    patch of surface it covers. Kept where two frames agree; one point per 1.2 cm, the sharpest."""
+    H, W = views[0]["depth"].shape
+    vv, uu = np.mgrid[0:H:SURFEL_STRIDE, 0:W:SURFEL_STRIDE].astype(np.float32)
+    pts, rgb, size, fid = [], [], [], []
+    for i, v in enumerate(views):
+        z = v["depth"][::SURFEL_STRIDE, ::SURFEL_STRIDE]
+        m = v["mask"][::SURFEL_STRIDE, ::SURFEL_STRIDE] & (z > 0)
+        K, z = v["K"], z[m]
+        cam = np.stack([(uu[m] - K[0, 2]) * z / K[0, 0], (vv[m] - K[1, 2]) * z / K[1, 1], z], 1)
+        pts.append(cam @ v["pose"][:3, :3].T + v["pose"][:3, 3])
+        rgb.append(v["rgb"][::SURFEL_STRIDE, ::SURFEL_STRIDE][m])
+        size.append(z * SURFEL_STRIDE / K[0, 0])
+        fid.append(np.full(len(z), i, np.uint16))
+    pts = to_room(np.concatenate(pts)) * s
+    rgb, size, fid = np.concatenate(rgb), np.concatenate(size) * s, np.concatenate(fid)
+    if len(views) > 1:
+        cell = _cell_keys(pts, SURFEL_AGREE)
+        pair = np.unique(np.stack([cell, fid.astype(np.int64)], 1), axis=0)
+        cells, frames_in = np.unique(pair[:, 0], return_counts=True)
+        agreed = frames_in[np.searchsorted(cells, cell)] >= 2
+        pts, rgb, size, fid = pts[agreed], rgb[agreed], size[agreed], fid[agreed]
+    order = np.argsort(size, kind="stable")  # sharpest first, so it wins its cell
+    _, first = np.unique(_cell_keys(pts[order], SURFEL_VOXEL), return_index=True)
+    keep = order[first]
+    rng = np.random.default_rng(0)
+    keep = rng.permutation(keep)[:MAX_SURFELS]  # shuffled: any prefix is an even sample, for phones
+    return surfel_bytes(pts[keep], rgb[keep], size[keep], fid[keep])
+
+
+def _voxel_keep(pts: np.ndarray, voxel: float, order: np.ndarray) -> np.ndarray:
+    """Indices of one point per voxel: the first one in `order` (highest confidence first)."""
+    keys = np.floor(pts[order] / voxel).astype(np.int64)
+    keys -= keys.min(0)
+    packed = (keys[:, 0] << 42) | (keys[:, 1] << 21) | keys[:, 2]
+    _, first = np.unique(packed, return_index=True)
+    return order[first]
+
+
+def view_points(views: list[dict]):
+    """World points for every confident pixel, with the exact formula the Node lookup uses."""
+    H, W = views[0]["depth"].shape
+    vv, uu = np.mgrid[0:H, 0:W].astype(np.float32)
+    pts, rgb, fid, conf, masks = [], [], [], [], []
+    for i, v in enumerate(views):
+        valid = v["mask"] & (v["depth"] > 0)
+        if valid.any():
+            valid &= v["conf"] >= np.percentile(v["conf"][valid], CONF_PERCENTILE)
+        masks.append(valid)
+        K, z = v["K"], v["depth"][valid]
+        cam = np.stack([(uu[valid] - K[0, 2]) * z / K[0, 0], (vv[valid] - K[1, 2]) * z / K[1, 1], z], 1)
+        pts.append(cam @ v["pose"][:3, :3].T + v["pose"][:3, 3])
+        rgb.append(v["rgb"][valid])
+        fid.append(np.full(len(z), i, np.uint16))
+        conf.append(v["conf"][valid])
+    return (*(np.concatenate(a) for a in (pts, rgb, fid, conf)), masks)
+
+
+class Scanner:
+    def __init__(self, model, device: str):
+        self.model = model
+        self.device = device
+        self.lock = threading.Lock()  # one GPU, one scan at a time
+
+    @classmethod
+    def load(cls, device: str | None = None) -> "Scanner":
+        import torch
+        from mapanything.models import MapAnything
+        from mapanything.utils.device import get_device
+
+        dev = get_device(device)
+        model = MapAnything.from_pretrained(MODEL_ID, revision=MODEL_REVISION).to(dev).eval()
+        torch.set_grad_enabled(False)
+        return cls(model, dev.type)
+
+    def _infer(self, frame_bytes: list[bytes], cameras: list[dict | None] | None = None) -> list[dict]:
+        """MapAnything on these frames. With `cameras` (one per frame, or None where unknown; the first must
+        be known), it also gets each frame's lens and position from the phone's own tracking (ARKit), and
+        the output comes back in that tracking's world instead of the first camera's frame."""
+        import torch
+        from mapanything.utils.image import load_images, preprocess_inputs
+
+        posed = bool(cameras) and cameras[0] is not None
+        if not posed:
+            with tempfile.TemporaryDirectory() as tmp:
+                paths = []
+                for i, data in enumerate(frame_bytes):
+                    paths.append(os.path.join(tmp, f"{i:04d}.jpg"))
+                    with open(paths[-1], "wb") as f:
+                        f.write(data)
+                views = load_images(paths)
+        else:
+            import cv2
+
+            raw = []
+            for data, cam in zip(frame_bytes, cameras):
+                view = {"img": cv2.cvtColor(cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)}
+                if cam is not None:
+                    view["intrinsics"] = np.asarray(cam["intrinsics"], np.float32)
+                    view["camera_poses"] = torch.from_numpy(np.asarray(cam["pose"], np.float32))
+                    view["is_metric_scale"] = torch.tensor([True])
+                raw.append(view)
+            views = preprocess_inputs(raw)
+        with self.lock, torch.inference_mode():
+            preds = self.model.infer(
+                views,
+                memory_efficient_inference=True,
+                use_amp=True,
+                amp_dtype="bf16",  # falls back to fp16 on MPS
+                apply_mask=True,
+                mask_edges=True,
+            )
+        # The model answers in the first view's camera frame; known positions put it back in the phone's world.
+        to_world = np.asarray(cameras[0]["pose"], np.float32) if posed else np.eye(4, dtype=np.float32)
+        out = []
+        for p in preds:
+            out.append({
+                "depth": p["depth_z"][0, ..., 0].float().cpu().numpy(),
+                "conf": p["conf"][0].float().cpu().numpy(),
+                "mask": p["mask"][0, ..., 0].cpu().numpy().astype(bool),
+                "K": p["intrinsics"][0].float().cpu().numpy(),
+                "pose": to_world @ p["camera_poses"][0].float().cpu().numpy(),
+                "rgb": (p["img_no_norm"][0].float().cpu().numpy().clip(0, 1) * 255).round().astype(np.uint8),
+                "metric_scale": float(p["metric_scaling_factor"].flatten()[0]) if "metric_scaling_factor" in p else None,
+            })
+        return out
+
+    def scan(
+        self,
+        items: list[tuple[str, bytes]],
+        max_frames: int = 48,
+        known: dict | None = None,
+        max_points: int = MAX_POINTS,
+        skip_depth: bool = False,
+        cameras: list[dict | None] | None = None,
+        max_faces: int = MAX_FACES,
+    ) -> ScanResult:
+        """`cameras`: per request frame, {intrinsics: 3x3, pose: 4x4 OpenCV camera-to-world in the phone's
+        gravity-aligned world (+Y up), metres} from ARKit tracking, or None where unknown."""
+        t0 = time.perf_counter()
+        timings = {}
+        known = {k: v for k, v in (known or {}).items() if v is not None}
+        tape = known.get("floorToJoistsM")
+        if tape is not None and not (1.0 <= float(tape) <= 4.0):
+            raise ScanError("floorToJoistsM must be between 1.0 and 4.0 metres")
+        if not items:
+            raise ScanError("send at least 1 frame (40-60 recommended)")
+
+        frames = load_frames(items)
+        picked = select_sharpest(frames, max_frames)
+        # Known camera positions: the first frame must have one, so a tracked frame leads.
+        known_cams = None
+        if cameras is not None:
+            if len(cameras) != len(items):
+                raise ScanError("cameras must have one entry per frame (null where unknown)")
+            first = next((i for i, f in enumerate(picked) if cameras[f.source_index] is not None), None)
+            if first is not None:
+                picked = picked[first:] + picked[:first]
+                known_cams = [cameras[f.source_index] for f in picked]
+        target = model_size(picked)
+        timings["decodeS"] = time.perf_counter() - t0
+
+        t = time.perf_counter()
+        views = self._infer([f.data for f in picked], known_cams)
+        timings["inferS"] = time.perf_counter() - t
+
+        t = time.perf_counter()
+        n = len(views)
+        H, W = views[0]["depth"].shape
+        pts, rgb, fid, conf, valid_masks = view_points(views)
+        if len(pts) < 1000:
+            raise ScanError("the model found almost no usable depth in these frames")
+        keep = _voxel_keep(pts, FIT_VOXEL, np.argsort(-conf, kind="stable"))
+        poses = np.stack([v["pose"] for v in views])
+        # With the phone's tracking, up is exactly +Y; otherwise it's guessed from how the phone was held.
+        up_hint = np.array([0.0, 1.0, 0.0]) if known_cams else None
+        fit = fit_room(pts[keep], fid[keep].astype(np.int64), n, poses[:, :3, 3], poses[:, :3, :3], up_hint=up_hint)
+        timings["fitS"] = time.perf_counter() - t
+
+        # Scale: the model's own metric guess, or one tape measurement of floor to joists.
+        warnings = list(fit.warnings)
+        model_height = fit.ceiling["height"] if fit.ceiling else None
+        s, source = 1.0, "arkit" if known_cams else "model"
+        if tape is not None:
+            if model_height is None:
+                warnings.append("Couldn't use floorToJoistsM: no ceiling plane was found, so sizes stay model estimates.")
+            else:
+                ratio = float(tape) / model_height
+                if not (1 / MAX_MEASUREMENT_RATIO <= ratio <= MAX_MEASUREMENT_RATIO):
+                    warnings.append(f"floorToJoistsM ({tape} m) is {ratio:.2f}x the scan's estimate ({model_height:.2f} m); check the tape number.")
+                s, source = ratio, "user_measurement"
+        if source == "model":
+            # Research note: images-only metric scale is typically 10-25% off indoors.
+            scale = {"source": "model", "factor": 1.0, "confidence": "low", "expectedErrorPct": 20}
+        elif source == "arkit":
+            # The phone's tracking fixes scale and drift, so depth is much closer with poses than without.
+            share = sum(c is not None for c in known_cams) / len(known_cams)
+            scale = {"source": "arkit", "factor": 1.0, "confidence": "high" if share >= 0.8 else "medium", "expectedErrorPct": 5 if share >= 0.8 else 8, "knownShare": round(share, 2)}
+        else:
+            # 3.5% is the paper's depth error once scale is aligned (ScanNet); worse if the ceiling wanders.
+            spread = fit.ceiling["spread"]
+            pct = 3.5 if spread is not None and spread * s <= 0.05 else 6.0
+            scale = {"source": "user_measurement", "factor": round(s, 4), "confidence": "high" if pct <= 3.5 else "medium", "expectedErrorPct": pct}
+        scale["modelCeilingHeightM"] = round(model_height, 3) if model_height else None
+        scale["modelMetricScale"] = views[0]["metric_scale"]
+        scale["known"] = known
+        if n == 1:
+            warnings.append("Single frame: one view can't confirm walls, the floor or scale.")
+
+        # Everything below is in the room frame, scaled.
+        t = time.perf_counter()
+        room, quality = describe(fit, s)
+        quality["warnings"] = warnings
+        R, o = fit.rotation, fit.origin
+        cloud = keep
+        limit = max(1000, min(int(max_points), MAX_POINTS))
+        if len(cloud) > limit:
+            cloud = np.random.default_rng(0).choice(cloud, limit, replace=False)
+        cloud = cloud[np.argsort(fid[cloud], kind="stable")]  # capture order, for the fly-in reveal
+        xyz = (fit.to_room(pts[cloud]) * s).astype(np.float32)
+        ply = ply_bytes(xyz, rgb[cloud], fid[cloud])
+
+        depths, frames_json = [], []
+        for i, (f, v) in enumerate(zip(picked, views)):
+            pose = np.eye(4)
+            pose[:3, :3] = R @ v["pose"][:3, :3]
+            pose[:3, 3] = s * (R @ (v["pose"][:3, 3] - o))
+            if not skip_depth:  # live previews only need the cloud
+                depths.append(np.where(valid_masks[i], v["depth"] * s, 0).astype(np.float16))
+            frames_json.append({
+                "index": i,
+                "sourceIndex": f.source_index,
+                "name": f.name,
+                "width": f.width,
+                "height": f.height,
+                "sharpness": round(f.sharpness, 1),
+                "model": crop_for(f.width, f.height, target),
+                "intrinsics": np.round(v["K"], 4).tolist(),
+                "pose": np.round(pose, 5).tolist(),
+                "validFraction": round(float(valid_masks[i].mean()), 3),
+                "depthOffset": i * H * W * 2,
+            })
+        depth = depth_bytes(depths) if depths else b""
+        surfels = b"" if skip_depth else dense_surfels(views, fit.to_room, s)
+        timings["exportS"] = time.perf_counter() - t
+        t = time.perf_counter()
+        mesh = b"" if skip_depth else room_mesh(views, fit.to_room, s, max_faces)
+        timings["meshS"] = time.perf_counter() - t
+        timings["totalS"] = time.perf_counter() - t0
+
+        scan = {
+            "version": 1,
+            "units": "m",
+            "coordinateFrame": "room: origin on the floor under the room box centre, +Y up, X along the longer side, Z = X cross Y (right-handed, three.js). Camera poses are camera-to-room with OpenCV camera axes (x right, y down, z forward).",
+            "model": {"id": MODEL_ID, "revision": MODEL_REVISION, "code": MODEL_CODE_TAG, "device": self.device},
+            "scaleSource": source,
+            "scale": scale,
+            # Room frame -> the phone's tracked world (with known cameras) or the first camera (without):
+            # world = rotation^T · (room / factor) + origin.
+            "world": {"frame": "arkit" if known_cams else "view0", "rotation": np.round(fit.rotation, 6).tolist(), "origin": np.round(fit.origin, 5).tolist()},
+            "room": room,
+            "quality": quality,
+            "framesReceived": len(frames),
+            "frames": frames_json,
+            "files": {
+                "points": {
+                    "part": "points",
+                    "filename": "points.ply",
+                    "format": "binary_little_endian PLY",
+                    "count": int(len(cloud)),
+                    "properties": ["x:float32", "y:float32", "z:float32", "red:uint8", "green:uint8", "blue:uint8", "frame:uint16"],
+                },
+                "mesh": {
+                    "part": "mesh",
+                    "filename": "mesh.bin",
+                    "format": "BRM1: uint32 faces x3, int16 millimetre positions x3, uint8 colours x3 (export.mesh_bytes)",
+                },
+                "depth": {
+                    "part": "depth",
+                    "filename": "depth.bin",
+                    "dtype": "float16",
+                    "byteOrder": "little",
+                    "shape": [n, H, W],
+                    "invalid": 0,
+                },
+            },
+            "timings": {k: round(v, 2) for k, v in timings.items()},
+        }
+        return ScanResult(scan, ply, depth, surfels, mesh)

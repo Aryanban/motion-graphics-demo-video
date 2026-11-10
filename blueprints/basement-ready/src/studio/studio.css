@@ -1,0 +1,163 @@
+/* "Is this your basement?" and the 3D studio (src/studio). Tokens only; mint is a fill, never text or
+   thin lines on light. */
+
+.studio-page { min-height: 100dvh; background: var(--color-bg); }
+.studio-head { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px clamp(16px, 4vw, 56px); background: var(--color-bg); border-bottom: 1px solid var(--color-ink); }
+.studio-wait { margin: 32px clamp(16px, 4vw, 56px); }
+/* Loading: the thing's own outline, flat (brand/ui.md). No shimmer. */
+.skeleton { border: var(--line); border-radius: var(--radius-2); background: var(--color-surface); }
+.skeleton-plan { height: min(60vh, 520px); }
+.skeleton-3d { height: min(70vh, 640px); }
+
+.studio-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 40px; padding: 28px var(--gutter) 48px; align-items: start; }
+.studio-main { display: grid; gap: 16px; min-width: 0; }
+.studio-title { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.studio-title h1 { font-size: var(--text-display); margin: 0; text-wrap: balance; }
+.studio-title .lede { margin: 6px 0 0; color: var(--color-ink-muted); max-width: 62ch; }
+.studio-title .ws-chips { margin: 0; }
+.studio-side { position: sticky; top: 84px; display: grid; gap: 28px; }
+/* A section of the side column: an ink rule and a heading, no box. */
+.side-card { display: grid; gap: 10px; padding-top: 14px; border-top: var(--line-ink); }
+.side-card h2 { font-size: var(--text-h3); letter-spacing: -0.02em; margin: 0; }
+.side-card p { margin: 0; }
+.side-eyebrow { font-size: var(--text-small); color: var(--color-ink-muted); }
+.side-big { font-family: var(--font-display); font-weight: 900; font-size: 40px; letter-spacing: -0.04em; line-height: 1; }
+.side-cta { display: grid; gap: 12px; justify-items: start; padding: 4px 2px; }
+.small { font-size: 13px; }
+.ws-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.field { display: grid; gap: 6px; }
+.field > span:first-child { font-weight: 600; font-size: 15px; }
+
+/* What we found */
+.finds { list-style: none; margin: 0; padding: 0; display: grid; }
+.find-pick { width: 100%; display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: center; min-height: 44px; padding: 6px 0; border: 0; border-top: 1px solid var(--color-border); background: none; color: var(--color-ink); font: inherit; text-align: left; }
+.finds li:first-child .find-pick { border-top: 0; }
+.find-pick i { width: 10px; height: 10px; border-radius: 50%; background: var(--find-mechanical); }
+.find-pick i[data-kind="window"] { background: var(--find-window); }
+.find-pick i[data-kind="exit"] { background: var(--find-exit); }
+.find-pick i[data-kind="stairs"] { background: var(--find-stairs); }
+.find-pick i[data-kind="duct"], .find-pick i[data-kind="bulkhead"] { background: var(--find-duct); }
+.find-pick i[data-kind="beam"] { background: var(--find-beam); }
+.find-pick .mono { font-size: 12px; }
+
+.length-input { display: grid; gap: 6px; }
+.length-input label { font-weight: 600; font-size: 14px; }
+.length-input > div { display: flex; gap: 8px; }
+.length-input .input { padding: 10px 12px; }
+.length-input .btn { white-space: nowrap; padding: 10px 14px; }
+
+/* The plan */
+/* The plan on its paper, in a hairline drawing frame. */
+.plan-stage, .studio-plan { position: relative; display: flex; flex-direction: column; background: var(--color-card); border: var(--line); border-radius: var(--radius-2); overflow: hidden; }
+.plan-tools { order: -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 10px 0; }
+.plan-tools .chip { min-height: 36px; padding: 4px 12px; }
+.plan-tools .segmented button { min-height: 34px; padding: 4px 12px; }
+.history { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; }
+.history .chip { border-color: transparent; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--color-ink); padding-inline: 8px; }
+.history .chip:disabled { opacity: 0.4; text-decoration: none; }
+.model-plan { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.model-plan:focus { outline: none; }
+.model-plan:focus-visible { outline: 2px solid var(--color-mint-line); outline-offset: -3px; }
+.model-plan.is-drawing { cursor: crosshair; }
+.model-plan .plan-zone-name { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; paint-order: stroke; stroke: var(--color-card); stroke-width: 5px; stroke-linejoin: round; }
+.model-plan .plan-zone-area { font-size: 19px; font-weight: 400; stroke-width: 4px; }
+.model-plan .plan-tag { font-size: 16px; paint-order: stroke; stroke: var(--color-card); stroke-width: 4px; stroke-linejoin: round; }
+.model-plan .plan-dim text { font-size: 22px; }
+.model-room { fill: transparent; stroke: none; }
+.model-room[data-unit="2"] { fill: color-mix(in srgb, var(--color-surface) 70%, transparent); }
+.model-room[data-kind="bedroom"] { fill: color-mix(in srgb, var(--color-mint) 26%, transparent); }
+.model-room[data-kind="bathroom"] { fill: color-mix(in srgb, var(--color-border) 80%, transparent); }
+.model-room[data-kind="kitchen"] { fill: color-mix(in srgb, var(--color-ink) 12%, transparent); }
+.model-room[data-kind="stairs"], .model-room[data-kind="mechanical"] { fill: color-mix(in srgb, var(--color-stop) 7%, transparent); }
+.model-room[data-selected] { stroke: var(--color-mint-line); stroke-width: 4; }
+.model-furniture { fill: color-mix(in srgb, var(--color-ink) 6%, transparent); stroke: var(--color-ink-muted); stroke-width: 1.5; pointer-events: none; }
+.model-wall line { stroke: var(--color-ink); }
+.model-wall[data-kind="new"] line:first-child { stroke: var(--color-ink-muted); }
+.model-wall[data-guess] line:first-child { stroke: var(--color-ink-muted); stroke-dasharray: 10 8; }
+.model-wall[data-selected] line:first-child { stroke: var(--color-mint-line); }
+.model-rated { stroke: var(--color-stop) !important; stroke-width: 3; stroke-dasharray: 12 6; fill: none; }
+.plan-window[data-status="new"] line:not(.plan-cut) { stroke-width: 4; }
+.plan-door[data-selected] line:not(.plan-cut), .plan-window[data-selected] line:not(.plan-cut) { stroke: var(--color-mint-line); }
+.model-alarm circle { fill: var(--color-card); stroke: var(--color-ink); stroke-width: 2; }
+.model-alarm[data-kind="co"] circle, .model-alarm[data-kind="combo"] circle { stroke: var(--color-stop); }
+.model-alarm text { font-family: var(--font-mono); font-size: 11px; font-weight: 600; fill: var(--color-ink); }
+.model-overhead rect { fill: color-mix(in srgb, var(--find-duct) 10%, transparent); stroke: var(--find-duct); stroke-width: 2; stroke-dasharray: 8 6; }
+.model-overhead[data-kind="beam"] rect { stroke: var(--find-beam); fill: color-mix(in srgb, var(--find-beam) 10%, transparent); }
+.model-overhead[data-guess] { opacity: 0.75; }
+.model-overhead text { font-size: 14px; }
+.plan-stairs[data-selected] rect, .plan-fixture[data-selected] rect, .model-overhead[data-selected] rect { stroke: var(--color-mint-line); stroke-width: 4; }
+.model-length { font-family: var(--font-mono); font-size: 18px; font-weight: 600; fill: var(--color-ink); paint-order: stroke; stroke: var(--color-card); stroke-width: 6; }
+.model-handles line { stroke: transparent; stroke-width: 26; cursor: pointer; }
+.model-handles line[data-drag] { cursor: grab; }
+.model-handles line[data-drag]:hover { stroke: color-mix(in srgb, var(--color-mint) 35%, transparent); }
+.model-handle { fill: var(--color-mint); stroke: var(--color-ink); stroke-width: 2; cursor: grab; }
+.model-fixture-hit { fill: transparent; cursor: pointer; }
+.model-fixture-hit[data-drag] { cursor: grab; }
+.model-sketch { stroke: var(--color-mint-line); stroke-width: 6; stroke-dasharray: 10 6; }
+.model-marker { fill: none; stroke: var(--color-stop); stroke-width: 4; animation: marker-in var(--dur-2) var(--ease-out) both; transform-box: fill-box; transform-origin: center; }
+@keyframes marker-in { from { opacity: 0; transform: scale(1.4); } to { opacity: 1; transform: none; } }
+.model-legend text { font-family: var(--font-mono); font-size: 13px; fill: var(--color-ink-muted); letter-spacing: 0.06em; }
+
+/* The 3D and the plan side by side; on a phone, one at a time */
+.studio-panes { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1440px) { .studio-panes { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.studio-panes > .pane-switch { display: none; }
+/* The 3D in a light drawing frame: never a dark slab on the sheet. */
+.studio-3d { position: relative; height: clamp(340px, 60vh, 620px); border: var(--line); border-radius: var(--radius-2); overflow: hidden; background: var(--color-surface); }
+.studio-3d .stage-tools { justify-content: flex-start; }
+/* The fire-separation key on the 3D's top edge: a plain tag with a line sample, like a drawing's legend. */
+.studio-key { margin: 0 0 0 auto; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 4px 9px; border: var(--line); border-radius: var(--radius-1); background: var(--color-card); color: var(--color-ink); font-size: 12px; font-weight: 600; }
+.studio-key i { width: 16px; height: 4px; background: var(--color-stop); }
+.studio-flag { background: var(--color-stop); color: var(--color-card); }
+
+.picked { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: var(--line-ink); border-bottom: var(--line); }
+.picked .chip { min-height: 36px; padding: 4px 14px; }
+
+/* Checks, cost and a described change */
+/* Checks, cost and a described change: ruled rows in the side column, each opening in place. */
+.studio-bar { display: grid; gap: 0; border-top: var(--line-ink); }
+.studio-bar .status-chip { width: 100%; }
+.status-chip { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 10px 0; border: 0; border-bottom: var(--line); border-radius: 0; background: none; color: var(--color-ink); font-weight: 700; font-size: 16px; text-align: left; }
+.status-chip::after { content: "+"; margin-left: auto; font-family: var(--font-mono); font-weight: 400; color: var(--color-ink-muted); }
+.status-chip[aria-expanded="true"]::after { content: "−"; }
+.status-chip .dot { flex: none; width: 8px; height: 8px; background: var(--color-ok); }
+.status-chip[data-state="fix"] .dot { background: var(--color-fix); }
+.status-chip[data-state="cost"] { font-family: var(--font-mono); font-weight: 500; }
+.studio-bar .history { margin-left: 0; padding-top: 6px; }
+.save-state { font-size: 12px; min-width: 6ch; }
+.check-group summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; list-style-position: inside; }
+.checks { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 2px; }
+.checks li { position: relative; display: grid; gap: 2px; padding: 10px 0 10px 18px; border-bottom: var(--line); --mark: var(--color-ok); }
+.checks li::before { content: ""; position: absolute; left: 0; top: 17px; width: 8px; height: 8px; background: var(--mark); }
+.checks li[data-state="fix"] { --mark: var(--color-fix); }
+.checks li[data-state="check"] { --mark: var(--color-ink-muted); }
+.checks li .muted { font-size: 14px; }
+.check-actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 6px; }
+.btn-small { min-height: 40px; padding: 0 14px; font-size: 15px; }
+.trades { list-style: none; margin: 0; padding: 0; display: grid; }
+.trades li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--color-border); }
+.trades li:first-child { border-top: 0; }
+.trades .mono { font-size: 14px; }
+.describe { display: grid; gap: 8px; justify-items: start; }
+.describe textarea { resize: vertical; min-height: 72px; }
+.proposal { display: grid; gap: 8px; padding: 12px 14px; border: var(--line-ink); border-radius: var(--radius-1); }
+
+@media (max-width: 1099px) {
+  .studio-body { grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; }
+}
+@media (max-width: 899px) {
+  .studio-body { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 20px; }
+  .studio-side { position: static; }
+  .studio-panes { grid-template-columns: minmax(0, 1fr); }
+  .studio-panes > .pane-switch { display: inline-flex; justify-self: start; }
+  .studio-panes > [data-shown="false"] { display: none; }
+  .studio-3d { height: min(62vh, 520px); }
+  .studio-title .ws-chips { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .model-marker { animation: none; }
+}
+/* The plan checked against the take: plain questions, each with its one-tap answer. */
+.plan-questions { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.plan-questions li { display: grid; gap: 8px; }
+.plan-questions li + li { border-top: 1px solid var(--color-border); padding-top: 12px; }

@@ -1,0 +1,16 @@
+node_modules
+dist
+.data
+media
+tmp
+.env
+.env.*
+!.env.example
+.git
+.claude
+docs
+tests
+*.tsbuildinfo
+services
+# the QA reviewer is a development tool, never part of the app
+scripts/qa

@@ -1,0 +1,34 @@
+{
+  "name": "motion-graphics-demo-starter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cohesive Remotion studio combining beat-synced SaaS demo primitives, Whisper word-cue sync, procedural SFX/tracks, Playwright CDP capture, 3D WebGL frame-stepping, and motion-blur QA.",
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "render": "remotion render Master out/master.mp4",
+    "still": "remotion still Scene-Example out/scene-example.png --frame=-1",
+    "timing": "node tools/dump-timing.mjs",
+    "stills": "node tools/stills.mjs",
+    "sfx:gen": "node tools/audio/gen-sfx.mjs",
+    "track:gen": "node tools/audio/gen-track.mjs",
+    "copy:check": "node tools/qa/check-copy.mjs",
+    "finish": "bash tools/finish.sh Master out"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.532",
+    "@remotion/cli": "4.0.532",
+    "@remotion/google-fonts": "4.0.532",
+    "@remotion/media": "4.0.532",
+    "@remotion/paths": "4.0.532",
+    "@remotion/renderer": "4.0.532",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.532"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}

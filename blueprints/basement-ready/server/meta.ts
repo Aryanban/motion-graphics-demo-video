@@ -1,0 +1,198 @@
+// Thin client for Meta Model API. Every model call in the app goes through here: each one's cost is
+// reported to server/spend.ts for the daily cap, and tests can record and replay it (server/replay.ts).
+import { readFileSync, statSync } from "node:fs";
+import { serviceFetch } from "./replay";
+import { charge, PRICES } from "./spend";
+
+// META_API_BASE points at the Canada relay in production (see services/meta-relay); direct otherwise.
+const BASE = process.env.META_API_BASE ?? "https://api.meta.ai/v1";
+
+function auth(): Record<string, string> {
+  if (process.env.RELAY_TOKEN) return { "x-relay-token": process.env.RELAY_TOKEN };
+  const key = process.env.MODEL_API_KEY;
+  if (!key) throw new Error("MODEL_API_KEY is not set");
+  return { Authorization: `Bearer ${key}` };
+}
+
+// Every call to Meta goes out here, so tests can record and replay them (server/replay.ts).
+const call = (route: string, init: RequestInit = {}) => serviceFetch("meta", BASE, route, init, auth);
+
+// One line in the server log for every Meta call: the model ID, what it was given, how long it took.
+// `[meta] sam-3.1 · video · "basement window" · 3.4 s`. Quiet under the unit tests.
+export function logCall(model: string, parts: (string | undefined)[], startedAt: number) {
+  if (process.env.VITEST) return;
+  const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
+  console.log(`[meta] ${[model, ...parts.filter(Boolean), `${secs} s`].join(" · ")}`);
+}
+
+// What a Responses call was given, for the log: the media kind and the first words of its text.
+function callParts(body: any, usage: any): (string | undefined)[] {
+  const content = (body?.input ?? []).flatMap((m: any) => (Array.isArray(m?.content) ? m.content : []));
+  const images = content.filter((c: any) => c.type === "input_image").length;
+  const kind = content.some((c: any) => c.type === "input_video") ? "video" : images ? `${images} image${images === 1 ? "" : "s"}` : "text";
+  const text = String(content.find((c: any) => c.type === "input_text")?.text ?? "").replace(/\s+/g, " ").trim();
+  const said = /^sam/.test(String(body?.model)) && text ? `"${text.slice(0, 40)}"` : undefined;
+  const tokens = usage?.input_tokens ? `${usage.input_tokens} in / ${usage.output_tokens ?? 0} out tokens` : undefined;
+  return [kind, said, tokens];
+}
+
+export async function responses(body: unknown, signal?: AbortSignal): Promise<any> {
+  const startedAt = Date.now();
+  const res = await call("/responses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Meta API ${res.status}: ${text.slice(0, 300)}`);
+  const r = JSON.parse(text);
+  logCall(String((body as { model?: string }).model), callParts(body, r.usage), startedAt);
+  // Spark and Wonder bill by the token; SAM by the frame, counted where it's called.
+  const cost = tokenCost(String((body as { model?: string }).model), r.usage);
+  if (cost) charge(cost.kind, cost.usd);
+  return r;
+}
+
+// What a Spark or Wonder answer cost, from its token counts. Null for a model billed some other way.
+export function tokenCost(model: string, usage: { input_tokens?: number; output_tokens?: number } | undefined) {
+  const tokens = (inn: number, out: number) => (usage?.input_tokens ?? 0) * inn + (usage?.output_tokens ?? 0) * out;
+  if (/spark/.test(model)) return { kind: "spark", usd: tokens(PRICES.sparkIn, PRICES.sparkOut) };
+  if (/wonder/.test(model)) return { kind: "wonder", usd: tokens(PRICES.wonderIn, PRICES.wonderOut) };
+  return null;
+}
+
+// Pulls the text out of a Responses API result.
+export function outputText(resp: any): string {
+  if (typeof resp.output_text === "string") return resp.output_text;
+  return (resp.output ?? [])
+    .filter((o: any) => o.type === "message")
+    .flatMap((o: any) => o.content ?? [])
+    .filter((c: any) => c.type === "output_text")
+    .map((c: any) => c.text)
+    .join("");
+}
+
+// Each message's text, in order. A model sometimes sends a message cut off partway, then a whole one.
+export function outputMessages(resp: any): string[] {
+  const messages = (resp.output ?? [])
+    .filter((o: any) => o.type === "message")
+    .map((o: any) => (o.content ?? []).filter((c: any) => c.type === "output_text").map((c: any) => c.text).join(""));
+  return messages.length ? messages : typeof resp.output_text === "string" ? [resp.output_text] : [];
+}
+
+// The answer in a reply: its last message that `read` accepts, then any earlier one, then all of its text
+// together. Throws what the last try threw.
+export function readReply<T>(resp: any, read: (text: string) => T): T {
+  let err: unknown = new Error("The reply had no text");
+  for (const text of [...outputMessages(resp).reverse(), outputText(resp)]) {
+    try {
+      return read(text);
+    } catch (e) {
+      err = e;
+    }
+  }
+  throw err;
+}
+
+export async function uploadFile(path: string, mime: string, name: string): Promise<string> {
+  const form = new FormData();
+  form.append("purpose", "user_data");
+  form.append("file", new Blob([readFileSync(path)], { type: mime }), name);
+  const res = await call("/files", { method: "POST", body: form });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Upload ${res.status}: ${text.slice(0, 300)}`);
+  return JSON.parse(text).id;
+}
+
+// SAM 3.1 on a whole video for one concept ("basement window"). Returns raw special-token text.
+// `frames` is the video's length in frames, for the cost.
+export async function samVideo(concept: string, fileId: string, frames = 0): Promise<string> {
+  const r = await responses({
+    model: "sam-3.1",
+    input: [
+      {
+        type: "message",
+        role: "user",
+        content: [
+          { type: "input_text", text: concept },
+          { type: "input_video", file_id: fileId },
+        ],
+      },
+    ],
+    metadata: { include_confidence: "true", mask_encoding: "one_bit" },
+  });
+  charge("sam_video", Math.max(PRICES.samVideoMinFrames, frames) * PRICES.samVideoFrame);
+  return outputText(r);
+}
+
+// SAM 3.1 on a single image (a data URL) for one concept. Returns raw special-token text.
+export async function samImage(concept: string, imageUrl: string): Promise<string> {
+  const r = await responses({
+    model: "sam-3.1",
+    input: [
+      {
+        type: "message",
+        role: "user",
+        content: [
+          { type: "input_text", text: concept },
+          { type: "input_image", image_url: imageUrl },
+        ],
+      },
+    ],
+    metadata: { include_confidence: "true", mask_encoding: "one_bit" },
+  });
+  charge("sam_image", PRICES.samImage);
+  return outputText(r);
+}
+
+export async function transcribe(wavPath: string): Promise<{ transcript: string; turns: { startMs: number; endMs: number; transcript: string }[] }> {
+  const form = new FormData();
+  form.append(
+    "request",
+    new Blob([JSON.stringify({ model: "muse-voice-transcribe-1.0", audioEncoding: "WAV", mode: "ENDPOINTING" })], {
+      type: "application/json",
+    }),
+  );
+  form.append("audio", new Blob([readFileSync(wavPath)], { type: "audio/wav" }), "voice.wav");
+  const startedAt = Date.now();
+  const res = await call("/asr/transcribe", { method: "POST", body: form });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Transcribe ${res.status}: ${text.slice(0, 300)}`);
+  logCall("muse-voice-transcribe-1.0", [`${Math.round(statSync(wavPath).size / 32000)} s of audio`], startedAt);
+  // 16 kHz mono 16-bit WAV: 32,000 bytes a second.
+  charge("transcribe", (statSync(wavPath).size / 32000 / 60) * PRICES.transcribeMinute);
+  const json = JSON.parse(text);
+  return { transcript: json.transcript ?? "", turns: json.turns ?? [] };
+}
+
+// Which models this key can reach from where the server runs. Logged at boot.
+export async function listModels(): Promise<string[]> {
+  const res = await call("/models");
+  if (!res.ok) throw new Error(`models ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return ((await res.json()).data ?? []).map((m: { id: string }) => m.id);
+}
+
+export const dataUrl = (path: string, mime: string) =>
+  `data:${mime};base64,${readFileSync(path).toString("base64")}`;
+
+// Muse Image: edit a photo by instruction (the Meta Model API's /images/edits). Returns the new image's bytes.
+// $0.01 an image. `size` sets the aspect ratio only; the server picks the pixels (up to 1600 px).
+export async function museEdit(image: Buffer, mime: string, prompt: string, size: string): Promise<Buffer> {
+  const form = new FormData();
+  form.append("model", "muse-image-1.0");
+  form.append("prompt", prompt);
+  form.append("n", "1");
+  form.append("size", size);
+  form.append("image", new Blob([new Uint8Array(image)], { type: mime }), mime === "image/png" ? "frame.png" : "frame.jpg");
+  const startedAt = Date.now();
+  const res = await call("/images/edits", { method: "POST", body: form, signal: AbortSignal.timeout(120_000) });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Muse Image ${res.status}: ${text.slice(0, 300)}`);
+  logCall("muse-image-1.0", ["edit 1 image", `"${prompt.replace(/\s+/g, " ").slice(0, 40)}"`], startedAt);
+  charge("muse_image", PRICES.museImage);
+  const b64 = JSON.parse(text).data?.[0]?.b64_json;
+  if (!b64) throw new Error("Muse Image returned no image");
+  return Buffer.from(b64, "base64");
+}
+
