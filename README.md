@@ -65,6 +65,24 @@ Run from `starter/`:
 
 ---
 
+## 🎨 Style Library: Pick a Look, Not a Template
+
+Ten named styles live in [`starter/src/styles/styles.json`](starter/src/styles/styles.json): Editorial Paper (the look of the Basement Ready hackathon winner, [`mFCAcvSXj48`](https://www.youtube.com/watch?v=mFCAcvSXj48)), Drawing Sheet, Keynote Black, Data Desk, Terminal, Swiss Poster, Riso Print, Sticker Pop, Photo Story and Dark Atmospheric. Each has its palette, type, shapes, motion, texture and rules.
+
+```bash
+cd starter
+npm run style:pick -- "90 s hackathon explainer, ML model, real app screens" --material screens
+npm run style:pick -- --use editorial-paper   # log it, so the next video doesn't repeat it
+npm run style:pick -- --list
+```
+
+- The picker suggests three styles that fit the brief. The agent checks them against the `frontend-design` skill's anti-patterns, then lays the brand's own colours and fonts over the chosen style (`getStyle(id, skin)`).
+- Shared parts are in [`starter/src/components/editorial/Editorial.tsx`](starter/src/components/editorial/Editorial.tsx): `Kicker`, `Headline` with a highlighted word, `LineArt`, `PillPipeline`, tilted `BrowserFrame`, `StampCard`, `NumberCard`, `Checklist`, `CaptionBar` and `CloseCard`.
+- Remotion Studio shows the same sample film in every style as `Style-<id>`.
+- The full guide is [`style-library.md`](.agents/skills/remotion-video-director/references/style-library.md).
+
+---
+
 ## 🎙️ Natural AI Voiceover Integration (Free & Studio Tiers)
 
 Standard OS text-to-speech (such as basic macOS `say` or Linux `espeak`) sounds robotic because it lacks natural breathing, micro-pauses, and emotional pitch inflections. This studio integrates a **multi-tier neural voiceover engine** in `starter/tools/audio/generate-voiceover.py`:

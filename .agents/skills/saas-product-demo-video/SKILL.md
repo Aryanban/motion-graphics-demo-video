@@ -32,7 +32,7 @@ A generic motion-graphics reel is easy to make and easy to ignore, and so is the
 
 1. **Setup.** Check the tools and note what is missing. `references/setup.md`
 2. **Intake.** Send the questionnaire as one message and record the answers; capture today's site, not memory. `references/asset-intake.md`, `references/product-ui-from-site.md`
-3. **Look and argument.** Break down two or three reference videos into transition verbs, pacing and signature moves; write the one sentence the film argues and the one signature move. `references/reference-video-vibe.md`, `references/creative-direction.md`
+3. **Look and argument.** Break down two or three reference videos into transition verbs, pacing and signature moves; write the one sentence the film argues and the one signature move. `references/reference-video-vibe.md`, `references/creative-direction.md`. Then choose a named style from the library with `npm run style:pick` and skin it with the brand (`remotion-video-director/references/style-library.md`); load `frontend-design` to reject generic picks
 4. **Scaffold.** Copy `assets/scaffold/` into the project and install. `references/project-scaffold.md`
 5. **Beats.** Run `scripts/detect-beats.py` on the soundtrack, writing `beats.json` over the scaffold's placeholder, and act on its reliability verdict. `references/beat-sync.md`
 6. **Brief and first scenes.** Write `docs/video/brief.md`, build scene 1 and the first scene that shows the product, check them in stills, then stop at the checkpoint below.
