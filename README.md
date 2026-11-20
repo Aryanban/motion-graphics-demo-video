@@ -143,7 +143,9 @@ bash scripts/setup-openmotion.sh          # clone to ~/.openmotion/app, npm ci, 
                                           # register the "openmotion" MCP server in Claude Code,
                                           # install its 8 skills where install-skills.sh puts ours
 bash scripts/setup-openmotion.sh --check  # verify without changing anything
-(cd ~/.openmotion/app && npm start)       # open the Studio at the printed URL
+(cd ~/.openmotion/app && MOTION_DATA_DIR=~/.openmotion/data npm start)
+                                          # open the Studio at the printed URL; it must use the
+                                          # MCP server's data folder or projects won't show
 ```
 
 Restart your agent after setup, then ask it to *"Use OpenMotion to recreate this reference for our brand"* or to start from a template. Preview and export need Chrome/Chromium and FFmpeg. For agents other than Claude Code, add this to their MCP config:

@@ -44,7 +44,8 @@ if [[ "$CHECK_ONLY" -eq 1 ]]; then
   fi
   if [[ -d "$OM_HOME/skills" ]]; then
     for s in $(skill_names); do
-      [[ -f "$HOME/.agents/skills/$s/SKILL.md" && -f "$HOME/.claude/skills/$s/SKILL.md" ]] && ok "skill $s" || miss "skill $s"
+      [[ -f "$HOME/.agents/skills/$s/SKILL.md" && -f "$HOME/.gemini/config/skills/$s/SKILL.md" \
+        && -f "$HOME/.claude/skills/$s/SKILL.md" ]] && ok "skill $s" || miss "skill $s"
     done
   fi
   exit "$FAILED"
@@ -81,9 +82,10 @@ mkdir -p "$OM_DATA"
 
 # 3. MCP server for Claude Code (stdio). Other agents: see the JSON in README.md.
 if command -v claude >/dev/null; then
-  claude mcp remove --scope user openmotion >/dev/null 2>&1 || true
-  claude mcp add --scope user openmotion -e "MOTION_DATA_DIR=$OM_DATA" -- \
-    "$NODE_BIN" --experimental-strip-types "$OM_HOME/mcp.ts"
+  MCP_ADD=(claude mcp add --scope user openmotion -e "MOTION_DATA_DIR=$OM_DATA" --
+    "$NODE_BIN" --experimental-strip-types "$OM_HOME/mcp.ts")
+  # Replace an existing entry only once a plain add has failed, so a working entry is never lost first.
+  "${MCP_ADD[@]}" >/dev/null 2>&1 || { claude mcp remove --scope user openmotion >/dev/null; "${MCP_ADD[@]}"; }
   echo "Registered MCP server 'openmotion' in Claude Code (user scope)"
 else
   echo "NOTE: 'claude' CLI not found; add the MCP server to your agent by hand (see README.md)"
@@ -101,5 +103,6 @@ for s in $(skill_names); do
   echo "Installed OpenMotion skill: $s"
 done
 
-echo "Done. Start the Studio with: (cd \"$OM_HOME\" && npm start)"
+# The Studio must use the same data folder as the MCP server, or it shows a different workspace.
+echo "Done. Start the Studio with: (cd \"$OM_HOME\" && MOTION_DATA_DIR=\"$OM_DATA\" npm start)"
 echo "Restart your agent so it loads the 'openmotion' MCP tools."
