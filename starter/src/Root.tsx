@@ -10,6 +10,8 @@ import { Scene2AuditHUD } from "./scenes/Scene2AuditHUD";
 import { Scene3VisualSoM } from "./scenes/Scene3VisualSoM";
 import { Scene4ASTPayoff } from "./scenes/Scene4ASTPayoff";
 import { Scene5ClosingCTA } from "./scenes/Scene5ClosingCTA";
+import { STYLE_SAMPLE_FRAMES, StyleSample } from "./scenes/StyleSample";
+import { STYLES } from "./styles";
 import { SubClock } from "./SubClock";
 import { canvas } from "./theme";
 import { FPS, SCENES, TOTAL_FRAMES } from "./timing";
@@ -119,5 +121,18 @@ export const RemotionRoot: React.FC = () => (
       width={canvas.width}
       height={canvas.height}
     />
+    {/* Style library: the same sample film in every style (src/styles/styles.json) */}
+    {STYLES.map((s) => (
+      <Composition
+        key={s.id}
+        id={`Style-${s.id}`}
+        component={StyleSample}
+        defaultProps={{ styleId: s.id }}
+        durationInFrames={STYLE_SAMPLE_FRAMES}
+        fps={FPS}
+        width={canvas.width}
+        height={canvas.height}
+      />
+    ))}
   </>
 );

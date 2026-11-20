@@ -73,7 +73,7 @@ lighting, deep shadows, shallow depth of field, 9:16
 - [ ] Entrances = 2–3 properties, staggered; nothing enters simultaneously
 - [ ] Exits animated, faster than entrances
 - [ ] Every still has Ken Burns; fast moves have motion blur
-- [ ] 5-layer stack present (bg mesh, assets, graphics, grade, grain+vignette)
+- [ ] Layers match the chosen style's `texture` (5-layer stack only for Dark Atmospheric; paper styles stay flat)
 - [ ] One hero color, ≤1 hero-colored/glowing element per frame
 - [ ] Display font ≥600 weight on heroes; no default-font hero text
 - [ ] Pixel gaps (not em) between large text blocks

@@ -71,21 +71,17 @@ Do NOT proceed until you understand: purpose, audience, desired action, and cons
 
 #### Step 2 - Creative Direction
 
-Present the creative direction options and ask the user to pick:
+Pick the look from the style library, not from memory. Read `references/style-library.md` and follow its "How to pick" steps:
 
-| Style | Feel | Best For |
-|-------|------|----------|
-| **Minimal/Jobs** | Black bg, dramatic pauses, one idea per frame, Impact font | Product launches, big ideas, keynotes |
-| **Data-Rich/Bloomberg** | Dark navy bg, animated charts, dense but organized | Meeting recaps, reports, dashboards |
-| **Warm/Narrative** | Warm tones, personal quotes, serif accents | Course intros, team stories, community |
-| **Terminal/Hacker** | Dark code theme, typewriter, monospace everywhere | Technical demos, dev tools, engineering |
-| **Custom** | User describes or provides reference screenshots/videos | Anything specific |
+1. Run `npm run style:pick -- "<brief>" --material screens|footage|data|none` in `starter/` to deal three styles that fit.
+2. Load the `frontend-design` skill and drop any pick that lands on its anti-patterns for this brief.
+3. Present the three to the user with one line each and your recommendation first; offer **Custom** for a reference video or screenshots.
 
-> "Which style direction fits your video? Or share screenshots of videos you've seen that you liked."
+> "These three styles fit the brief: [A] (recommended, because ...), [B], [C]. Which one, or share a reference video?"
 
-**WAIT** for answer.
+**WAIT** for answer. Then skin the chosen style with the brand's own tokens, render `Style-<id>` stills, and record it with `npm run style:pick -- --use <id>`.
 
-Read `references/video-archetypes.md` for the full spec of the chosen direction (colors, fonts, animation style, timing rules).
+The older presets below (Minimal/Jobs, Bloomberg, Warm, Terminal) map to `keynote-black`, `data-desk`, `photo-story` and `terminal` in the library; use the library entries.
 
 #### Step 3 - Reference Input (Optional)
 
@@ -117,7 +113,7 @@ Synthesize into a structured brief:
 **Core Message**: [the ONE thing viewers should remember]
 **Desired Action**: [what viewers should do next]
 **Duration**: [seconds] ([frames] frames at 30fps)
-**Creative Direction**: [selected style - Minimal/Jobs, Bloomberg, etc.]
+**Creative Direction**: [style id from the library, the brand skin, and the style's rules]
 **Emotional Arc**: [e.g., curiosity -> proof -> confidence -> action]
 
 ## Audio Strategy

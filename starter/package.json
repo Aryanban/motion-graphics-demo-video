@@ -14,7 +14,9 @@
     "sfx:gen": "node tools/audio/gen-sfx.mjs",
     "track:gen": "node tools/audio/gen-track.mjs",
     "copy:check": "node tools/qa/check-copy.mjs",
-    "finish": "bash tools/finish.sh Master out"
+    "finish": "bash tools/finish.sh Master out",
+    "style:pick": "node tools/style/pick-style.mjs",
+    "style:sheet": "node tools/stills.mjs Style-editorial-paper 100 190 300 400 470 --sheet out/check/style-sheet.png --cols 5"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.532",

@@ -19,13 +19,17 @@ opacity-only fades, simultaneous entrances, flat colors, and no texture. That is
 3. **Stagger everything.** Lists, words, rays, cards: 3–6 frame offsets. Nothing
    enters simultaneously.
 4. **Exits exist and are faster than entrances** (~10 frames vs ~20).
-5. **Five-layer stack in every scene**, bottom to top: background mesh → assets →
-   graphics/type → color grade → grain + vignette. Never a flat solid background.
+5. **Layer stack follows the chosen style** (`starter/src/styles/styles.json`, field `texture`).
+   Dark Atmospheric uses the five-layer stack: background mesh, assets, type, grade, grain and
+   vignette. Paper styles (Editorial Paper, Drawing Sheet, Swiss Poster) stay flat and get depth
+   from tilted frames and shadows instead. Never add mesh or grain to a style that does not list it;
+   that is the most common way videos end up looking generic.
 6. **Every still image gets Ken Burns** (slow scale 1→1.08 + pan). Every video asset
    uses `<OffthreadVideo>`, never `<Video>`.
 7. **Idle elements breathe**: anything on screen >2s gets sin-wave micro-motion.
 8. **All timing derives from `fps`** via `useVideoConfig()`. No magic frame numbers.
-9. **One theme object** at the top of the project (colors, easings, spring presets,
+9. **One style, one theme object.** Pick a style from the library first
+   (`remotion-video-director/references/style-library.md`, `npm run style:pick`), then one theme object (colors, easings, spring presets,
    fonts). Never inline a hex color or easing in a component.
 10. **Render, extract frames, LOOK at them, fix, re-render.** Never deliver an
     unverified render. This loop is mandatory — see Verification below.

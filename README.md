@@ -65,6 +65,24 @@ Run from `starter/`:
 
 ---
 
+## 🎨 Style Library: Pick a Look, Not a Template
+
+Ten named styles live in [`starter/src/styles/styles.json`](starter/src/styles/styles.json): Editorial Paper (the look of the Basement Ready hackathon winner, [`mFCAcvSXj48`](https://www.youtube.com/watch?v=mFCAcvSXj48)), Drawing Sheet, Keynote Black, Data Desk, Terminal, Swiss Poster, Riso Print, Sticker Pop, Photo Story and Dark Atmospheric. Each has its palette, type, shapes, motion, texture and rules.
+
+```bash
+cd starter
+npm run style:pick -- "90 s hackathon explainer, ML model, real app screens" --material screens
+npm run style:pick -- --use editorial-paper   # log it, so the next video doesn't repeat it
+npm run style:pick -- --list
+```
+
+- The picker suggests three styles that fit the brief. The agent checks them against the `frontend-design` skill's anti-patterns, then lays the brand's own colours and fonts over the chosen style (`getStyle(id, skin)`).
+- Shared parts are in [`starter/src/components/editorial/Editorial.tsx`](starter/src/components/editorial/Editorial.tsx): `Kicker`, `Headline` with a highlighted word, `LineArt`, `PillPipeline`, tilted `BrowserFrame`, `StampCard`, `NumberCard`, `Checklist`, `CaptionBar` and `CloseCard`.
+- Remotion Studio shows the same sample film in every style as `Style-<id>`.
+- The full guide is [`style-library.md`](.agents/skills/remotion-video-director/references/style-library.md).
+
+---
+
 ## 🎙️ Natural AI Voiceover Integration (Free & Studio Tiers)
 
 Standard OS text-to-speech (such as basic macOS `say` or Linux `espeak`) sounds robotic because it lacks natural breathing, micro-pauses, and emotional pitch inflections. This studio integrates a **multi-tier neural voiceover engine** in `starter/tools/audio/generate-voiceover.py`:
@@ -114,6 +132,39 @@ For full architectural details, script tuning, and speech-rate formulas, see [`s
 
 ---
 
+## 🎬 OpenMotion: HTML Motion Studio + MCP (as used by DeepSeek Harness)
+
+[OpenMotion](https://github.com/nexu-io/openmotion) (Apache-2.0) codes video in HTML/CSS/JS, opens it in a local Studio with a timeline, and exports MP4 or transparent WebM. It also recreates a reference video shot by shot from its 300+ Motion.md guides. Your agent drives it through an MCP server; this is the same Studio + MCP + Skills bundle that the DeepSeek Harness plugin ships.
+
+It is installed next to this repo, not vendored, pinned to commit `f942757`:
+
+```bash
+bash scripts/setup-openmotion.sh          # clone to ~/.openmotion/app, npm ci, build Studio,
+                                          # register the "openmotion" MCP server in Claude Code,
+                                          # install its 8 skills where install-skills.sh puts ours
+bash scripts/setup-openmotion.sh --check  # verify without changing anything
+(cd ~/.openmotion/app && MOTION_DATA_DIR=~/.openmotion/data npm start)
+                                          # open the Studio at the printed URL; it must use the
+                                          # MCP server's data folder or projects won't show
+```
+
+Restart your agent after setup, then ask it to *"Use OpenMotion to recreate this reference for our brand"* or to start from a template. Preview and export need Chrome/Chromium and FFmpeg. For agents other than Claude Code, add this to their MCP config:
+
+```json
+{ "mcpServers": { "openmotion": {
+  "command": "/absolute/path/to/node",
+  "args": ["--experimental-strip-types", "/Users/you/.openmotion/app/mcp.ts"],
+  "env": { "MOTION_DATA_DIR": "/Users/you/.openmotion/data" } } } }
+```
+
+**Bring an OpenMotion shot into a Remotion film:** export it from the Studio (MP4, or transparent WebM for an overlay), put the file under `starter/public/openmotion/`, and play it with the existing `BRollLayer`:
+
+```tsx
+<BRollLayer src="openmotion/hero-reveal.webm" startFrame={12} />
+```
+
+---
+
 ## Repository Structure
 
 ```text
@@ -125,7 +176,8 @@ motion-graphics-demo-video/
 │   └── remotion-motion-graphics/     # Motion-graphics examples & spring/caption patterns
 ├── .claude/skills -> ../.agents/skills
 ├── scripts/
-│   └── install-skills.sh             # Installs the 4 skills globally or into any project
+│   ├── install-skills.sh             # Installs the 4 skills globally or into any project
+│   └── setup-openmotion.sh           # Installs OpenMotion Studio + MCP + skills (pinned)
 ├── starter/                          # Cohesive runnable Remotion Studio workspace
 │   ├── docs/prompts/                 # Script, voice, music, and review prompt templates
 │   ├── public/                       # Static assets (SFX, music tracks, captured clips)
