@@ -10,6 +10,7 @@ This repository integrates tools, agent skills, templates, and reference bluepri
 | `BayramAnnakov/remotion-video-director` | https://github.com/BayramAnnakov/remotion-video-director | `c16a3a0` | MIT (`README.md`) | `.agents/skills/remotion-video-director/` |
 | `haidrrrry/claude-remotion-skill` | https://github.com/haidrrrry/claude-remotion-skill | `1dcbe5e` | MIT (`Copyright (c) 2025 haidrrrry`) | `.agents/skills/remotion-motion-graphics/`, `templates/claude-remotion-examples/`, `starter/tools/audio/gen-sfx.mjs`, `starter/tools/audio/gen-track.mjs` |
 | `reactvideoeditor/remotion-templates` | https://github.com/reactvideoeditor/remotion-templates | `6209b72` | MIT (`README.md`) | `templates/remotion-templates/` |
+| `nexu-io/openmotion` | https://github.com/nexu-io/openmotion | `f942757` | Apache-2.0 (`LICENSE`) | Not vendored: `scripts/setup-openmotion.sh` clones it to `~/.openmotion/app` and installs its Studio, MCP server and skills from there |
 
 ---
 

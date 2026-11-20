@@ -132,6 +132,37 @@ For full architectural details, script tuning, and speech-rate formulas, see [`s
 
 ---
 
+## 🎬 OpenMotion: HTML Motion Studio + MCP (as used by DeepSeek Harness)
+
+[OpenMotion](https://github.com/nexu-io/openmotion) (Apache-2.0) codes video in HTML/CSS/JS, opens it in a local Studio with a timeline, and exports MP4 or transparent WebM. It also recreates a reference video shot by shot from its 300+ Motion.md guides. Your agent drives it through an MCP server; this is the same Studio + MCP + Skills bundle that the DeepSeek Harness plugin ships.
+
+It is installed next to this repo, not vendored, pinned to commit `f942757`:
+
+```bash
+bash scripts/setup-openmotion.sh          # clone to ~/.openmotion/app, npm ci, build Studio,
+                                          # register the "openmotion" MCP server in Claude Code,
+                                          # install its 8 skills where install-skills.sh puts ours
+bash scripts/setup-openmotion.sh --check  # verify without changing anything
+(cd ~/.openmotion/app && npm start)       # open the Studio at the printed URL
+```
+
+Restart your agent after setup, then ask it to *"Use OpenMotion to recreate this reference for our brand"* or to start from a template. Preview and export need Chrome/Chromium and FFmpeg. For agents other than Claude Code, add this to their MCP config:
+
+```json
+{ "mcpServers": { "openmotion": {
+  "command": "/absolute/path/to/node",
+  "args": ["--experimental-strip-types", "/Users/you/.openmotion/app/mcp.ts"],
+  "env": { "MOTION_DATA_DIR": "/Users/you/.openmotion/data" } } } }
+```
+
+**Bring an OpenMotion shot into a Remotion film:** export it from the Studio (MP4, or transparent WebM for an overlay), put the file under `starter/public/openmotion/`, and play it with the existing `BRollLayer`:
+
+```tsx
+<BRollLayer src="openmotion/hero-reveal.webm" startFrame={12} />
+```
+
+---
+
 ## Repository Structure
 
 ```text
@@ -143,7 +174,8 @@ motion-graphics-demo-video/
 │   └── remotion-motion-graphics/     # Motion-graphics examples & spring/caption patterns
 ├── .claude/skills -> ../.agents/skills
 ├── scripts/
-│   └── install-skills.sh             # Installs the 4 skills globally or into any project
+│   ├── install-skills.sh             # Installs the 4 skills globally or into any project
+│   └── setup-openmotion.sh           # Installs OpenMotion Studio + MCP + skills (pinned)
 ├── starter/                          # Cohesive runnable Remotion Studio workspace
 │   ├── docs/prompts/                 # Script, voice, music, and review prompt templates
 │   ├── public/                       # Static assets (SFX, music tracks, captured clips)
